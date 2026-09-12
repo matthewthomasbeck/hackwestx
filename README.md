@@ -40,3 +40,8 @@ Prediction Service Components:
 * needs to use Tailscale to put desktop and EC2 in same network to avoid port forwarding on home network
 * must use LSTM RNN (most accurate for timeseries, deeplearning goated)
 * need to send data to backend in form of JSON
+
+THINGS DONE:
+1. set up AWS EC2 isntance to hold my flutter backend
+2. set up Tailscale and EC2 VPN to mesh my AWS backend and my Desktop with its beefy GPU
+
