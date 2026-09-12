@@ -1,4 +1,4 @@
-###THE PLAN!
+THE PLAN!
 
 login to app with auth0 -> EC2 backend (EC2B) checks creds -> EC2B grabs data from Tiger Data DB (TD) for Sol ticker ->
 if new there is new data via checking date of latest and current date, update TD with latest data and call prediction service (PS) with auth0 creds ->
@@ -6,13 +6,35 @@ take timeseries JSON given by backend and predict using LSTM RNN -> return predi
 EC2B sends latest data to Flutter Frontend (FF) and reloads the page if there was new data detected -> if market looks good (i.e. Sol predicted to increase in price), suggest to buy ->
 if user wants to buy, handle Sol purchase workflow (paper purchasing, I dont want to risk my net worth lmao)
 
-###Important Components:
+Competitive Components:
 
-* needs to use auth0 for use login and prediciton service auth
-* needs to use Tailscale to put desktop and EC2 in same network to avoid port forwarding on home network
-* needs to use Tiger Database to store timeseries data efficiently
+* needs to use auth0 for use login and prediciton service auth (MLH Auth0 track)
+* needs to use Tiger Database to store timeseries data efficiently (MLH Tiger Data track)
+* needs to use Solana timeseries data from Solana api on Python (MLH Solana track)
+* needs to incorporate Solana blockchain API for paper trading (MLH Solana track)
+* needs to use Flutter for iOS + Android compatibility and gestures (UI/UX track)
+
+Application Frontend Components:
+* use aesthetic trading color system (pastels + night mode ideal)
+* cannot be ugly af
+* must allow for ticker updates from backend
+* must allow for trade placing
+* must have loading screen
+* must have logging screen
+* must take and display JSON data from backend
+
+Application Backend Components:
+* needs to use auth0 for login
 * needs to use EC2 and not Google Cloud for Tailscale compatibility
-* needs to use Solana timeseries data from Solana api on Python
-* needs to incorporate Solana blockchain API for paper trading
-* needs to use Flutter for iOS + Android compatibility and gestures
 * needs to have thread for when prediction is being made
+* must take data from solana api, store timeseries data in tiger data, store predicitons data in tiger data, and if new data detected, update the actual data and prediciton data tables
+* must compare predictions vs actual data for a model accuracy
+* must serve the flutter fronend with JSON data
+* must send data to both frontend and prediction service via JSON
+* must take in JSON data from prediction service
+
+Prediction Service Components:
+* needs to use auth0 for credentials
+* needs to use Tailscale to put desktop and EC2 in same network to avoid port forwarding on home network
+* must use LSTM RNN (most accurate for timeseries, deeplearning goated)
+* need to send data to backend in form of JSON
