@@ -1,3 +1,5 @@
 .env*
 
+hackwestx-flutter-backend.pem
+
 LLM_ADVICE.md
