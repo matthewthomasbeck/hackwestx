@@ -8,4 +8,11 @@ if user wants to buy, handle Sol purchase workflow (paper purchasing, I dont wan
 
 ###Important Components:
 
+* needs to use auth0 for use login and prediciton service auth
+* needs to use Tailscale to put desktop and EC2 in same network to avoid port forwarding on home network
+* needs to use Tiger Database to store timeseries data efficiently
+* needs to use EC2 and not Google Cloud for Tailscale compatibility
+* needs to use Solana timeseries data from Solana api on Python
+* needs to incorporate Solana blockchain API for paper trading
+* needs to use Flutter for iOS + Android compatibility and gestures
 * needs to have thread for when prediction is being made
