@@ -1,3 +1,5 @@
+APP NAME (WIP): SolSimp
+
 THE PLAN!
 
 login to app with auth0 -> EC2 backend (EC2B) checks creds -> EC2B grabs data from Tiger Data DB (TD) for Sol ticker ->
