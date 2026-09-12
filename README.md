@@ -1,4 +1,4 @@
-APP NAME (WIP): SolSimp
+APP NAME (WIP): Solana Soothsayer
 
 THE PLAN!
 
