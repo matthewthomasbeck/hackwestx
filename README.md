@@ -75,5 +75,5 @@ THINGS DONE:
 16. application frontend basic skeleton with all pages from notebook implemented
 17. application frontend now uses auth0 for user authentication
 18. application backend now pushes data to frontend
-
+19. application frontend now takes in data from backend
 
