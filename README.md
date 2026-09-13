@@ -80,7 +80,8 @@ THINGS DONE:
 21. redid logging as it was too busy and annoying
 22. added time frame logic to the frontend graph
 23. frontend forecast now shows 5 predictions
-
+24. added paper trading
+25. added sparkline for trading
 
 
 

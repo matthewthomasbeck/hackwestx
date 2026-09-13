@@ -241,15 +241,58 @@ class _TradeConfirmPageState extends State<TradeConfirmPage> { // class to toggl
               ),
             ],
             const Spacer(),
-            FilledButton(
-              onPressed: _submitting ? null : _confirm,
-              child: Text(_submitting ? 'Submitting…' : 'Confirm'),
+            Builder(
+              builder: (context) {
+                final brightness = Theme.of(context).brightness;
+                final onGradient = AppColors.onSolanaGradient(brightness);
+                final canSubmit = !_submitting;
+                return Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(999),
+                    boxShadow: canSubmit
+                        ? AppColors.solanaGlow(strength: 0.7)
+                        : null,
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: canSubmit ? _confirm : null,
+                      borderRadius: BorderRadius.circular(999),
+                      child: Ink(
+                        decoration: BoxDecoration(
+                          gradient: canSubmit ? AppColors.solanaDiagonal : null,
+                          color: canSubmit
+                              ? null
+                              : Theme.of(context).disabledColor,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          child: Text(
+                            _submitting ? 'Submitting…' : 'Confirm',
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                                  color: onGradient,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ); // Solana-gradient confirm CTA
+              },
             ),
             const SizedBox(height: 8),
-            OutlinedButton(
+            TextButton(
               onPressed: _submitting ? null : () => Navigator.of(context).pop(),
+              style: TextButton.styleFrom(
+                foregroundColor: Theme.of(context).brightness == Brightness.dark
+                    ? AppColors.whiteLightest
+                    : AppColors.blackDarkest,
+              ),
               child: const Text('Cancel'),
-            ),
+            ), // theme-neutral text cancel (not Material blue)
           ],
         ),
       ),

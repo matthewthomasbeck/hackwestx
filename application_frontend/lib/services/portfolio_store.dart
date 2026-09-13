@@ -93,6 +93,34 @@ class PortfolioStore extends ChangeNotifier { // class to hold in-app paper cash
 
   }
 
+  /*########## VALUE HISTORY ##########*/
+
+  List<double> valueHistory(double solPrice) { // function to build equity curve for portfolio sparkline
+
+    final points = <double>[AppConfig.paperStartingUsd]; // start cash
+    var cash = AppConfig.paperStartingUsd; // replay cash
+    var sol = 0.0; // replay SOL
+
+    for (final trade in trades.reversed) { // oldest → newest
+      if (trade.side == 'buy') { // paper buy
+        cash -= trade.usdAmount; // debit
+        sol += trade.solAmount; // credit
+      } else if (trade.side == 'sell') { // paper sell (future-ready)
+        cash += trade.usdAmount; // credit
+        sol -= trade.solAmount; // debit
+      }
+      points.add(cash + (sol * trade.price)); // mark at fill price
+    }
+
+    final mark = solPrice > 0 ? solPrice : avgBuyPrice; // live spot when available
+    final tip = cashUsd + (solHeld * (mark > 0 ? mark : 0)); // current MTM
+    if ((points.last - tip).abs() > 1e-6 || points.length == 1) { // tip moved or only start
+      points.add(tip); // live portfolio value
+    }
+    return points; // sparkline series
+
+  }
+
   /*########## RESET ##########*/
 
   void reset() { // function to restore starting cash and clear holdings / history

@@ -25,6 +25,7 @@ import 'package:flutter/material.dart'; // import Flutter Material UI toolkit
 import '../config.dart'; // import paper starting USD
 import '../services/app_services.dart'; // import portfolio + market stores
 import '../theme/app_theme.dart'; // import P&L colors
+import '../widgets/portfolio_sparkline.dart'; // import equity mini chart
 
 
 
@@ -95,15 +96,14 @@ class PortfolioPage extends StatelessWidget { // class for cash / holdings / unr
                 valueColor: pnl >= 0 ? AppColors.green : AppColors.red,
               ),
               const SizedBox(height: 24),
-              Container(
-                height: 120,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                ),
-                child: const Text('Portfolio sparkline stub'), // optional mini chart later
+              Text(
+                'Value over time',
+                style: Theme.of(context).textTheme.titleMedium,
               ),
+              const SizedBox(height: 8),
+              PortfolioSparkline(
+                values: portfolioStore.valueHistory(solPrice),
+              ), // start → fills → live MTM
             ],
           ),
         ); // portfolio scaffold
