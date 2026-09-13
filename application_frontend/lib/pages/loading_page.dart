@@ -24,7 +24,7 @@ import 'package:flutter/material.dart'; // import Flutter Material UI toolkit
 
 import '../routes.dart'; // import named route constants
 import '../services/app_services.dart'; // import Auth0 session + market store
-import '../theme/app_theme.dart'; // import brand color tokens
+import '../widgets/solana_logo.dart'; // import three-bar Solana mark
 
 
 
@@ -151,17 +151,7 @@ class _LoadingPageState extends State<LoadingPage>
               opacity: Tween<double>(begin: 0.55, end: 1.0).animate(_pulse),
               child: ScaleTransition(
                 scale: Tween<double>(begin: 0.92, end: 1.05).animate(_pulse),
-                child: Icon(
-                  Icons.currency_bitcoin, // placeholder until Solana asset logo is added
-                  size: 88,
-                  color: AppColors.purple.withValues(alpha: 0.95),
-                  shadows: [
-                    Shadow(
-                      color: AppColors.blue.withValues(alpha: 0.65),
-                      blurRadius: 24,
-                    ), // slight glow
-                  ],
-                ), // pulsing center mark
+                child: const SolanaLogo(size: 96), // pulsing Solana three-bar mark
               ),
             ),
             const SizedBox(height: 28), // spacer under logo

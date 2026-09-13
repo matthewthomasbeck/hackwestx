@@ -48,9 +48,7 @@ class SettingsPage extends StatefulWidget { // class for profile / theme / reset
 
 /*########## SETTINGS PAGE STATE ##########*/
 
-class _SettingsPageState extends State<SettingsPage> { // class to hold local theme toggle stub
-
-  bool _darkMode = true; // local dark toggle until ThemeMode is app-wide
+class _SettingsPageState extends State<SettingsPage> { // class for profile / theme / logout actions
 
   /*########## RESET PAPER ##########*/
 
@@ -106,39 +104,44 @@ class _SettingsPageState extends State<SettingsPage> { // class to hold local th
 
     return Scaffold(
       appBar: AppBar(title: const Text('Account Settings')),
-      body: ListView(
-        children: [
-          ListTile(
-            title: Text(displayName), // Auth0 name
-            subtitle: Text(displayEmail), // Auth0 email
-            leading: const Icon(Icons.person_outline),
-          ),
-          SwitchListTile(
-            title: const Text('Dark mode'),
-            value: _darkMode,
-            onChanged: (v) => setState(() => _darkMode = v), // TODO: lift ThemeMode to app root
-          ),
-          ListTile(
-            leading: const Icon(Icons.restart_alt),
-            title: const Text('Reset paper account'),
-            onTap: _confirmReset,
-          ),
-          ListTile(
-            leading: const Icon(Icons.help_outline),
-            title: const Text('Onboarding / help'),
-            onTap: () => Navigator.of(context).pushNamed(AppRoutes.onboarding),
-          ),
-          const ListTile(
-            leading: Icon(Icons.info_outline),
-            title: Text('App version'),
-            subtitle: Text('1.0.0+1'),
-          ),
-          ListTile(
-            leading: const Icon(Icons.logout),
-            title: const Text('Log out'),
-            onTap: _logout,
-          ),
-        ],
+      body: ListenableBuilder(
+        listenable: themeStore, // live dark/light switch
+        builder: (context, _) {
+          return ListView(
+            children: [
+              ListTile(
+                title: Text(displayName), // Auth0 name
+                subtitle: Text(displayEmail), // Auth0 email
+                leading: const Icon(Icons.person_outline),
+              ),
+              SwitchListTile(
+                title: const Text('Dark mode'),
+                value: themeStore.isDark,
+                onChanged: themeStore.setDarkMode, // flips app ThemeMode
+              ),
+              ListTile(
+                leading: const Icon(Icons.restart_alt),
+                title: const Text('Reset paper account'),
+                onTap: _confirmReset,
+              ),
+              ListTile(
+                leading: const Icon(Icons.help_outline),
+                title: const Text('Onboarding / help'),
+                onTap: () => Navigator.of(context).pushNamed(AppRoutes.onboarding),
+              ),
+              const ListTile(
+                leading: Icon(Icons.info_outline),
+                title: Text('App version'),
+                subtitle: Text('1.0.0+1'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.logout),
+                title: const Text('Log out'),
+                onTap: _logout,
+              ),
+            ],
+          ); // settings list
+        },
       ),
     ); // settings scaffold
 

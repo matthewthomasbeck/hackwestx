@@ -23,7 +23,7 @@ import 'package:flutter/material.dart'; // import Flutter painting helpers (incl
 /*##### import local modules #####*/
 
 import '../models/market.dart'; // import OHLCV / prediction points
-import '../theme/app_theme.dart'; // import brand colors
+import '../theme/app_theme.dart'; // import brand + chart line colors
 
 
 
@@ -36,7 +36,7 @@ import '../theme/app_theme.dart'; // import brand colors
 
 /*########## MARKET CHART ##########*/
 
-class MarketChart extends StatelessWidget { // class to paint real (solid) + prediction (dashed) closes
+class MarketChart extends StatefulWidget { // class to paint real + dashed forecast with pinging dots
 
   const MarketChart({
     super.key,
@@ -47,22 +47,69 @@ class MarketChart extends StatelessWidget { // class to paint real (solid) + pre
   final List<OhlcvPoint> real; // historical closes
   final List<PredictionPoint> predictions; // forward closes
 
+  @override
+  State<MarketChart> createState() => _MarketChartState(); // create animated state
+
+}
+
+
+/*########## MARKET CHART STATE ##########*/
+
+class _MarketChartState extends State<MarketChart>
+    with SingleTickerProviderStateMixin { // class to drive prediction-dot ping loop
+
+  late final AnimationController _ping; // 0..1 ping phase
+
+  /*########## INIT STATE ##########*/
+
+  @override
+  void initState() { // function to start repeating ping animation
+
+    super.initState(); // Flutter init
+    _ping = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2600),
+    )..repeat(); // slower continuous soft ping
+
+  }
+
+  /*########## DISPOSE ##########*/
+
+  @override
+  void dispose() { // function to stop ping controller
+
+    _ping.dispose(); // free ticker
+    super.dispose(); // Flutter dispose
+
+  }
+
   /*########## BUILD ##########*/
 
   @override
-  Widget build(BuildContext context) { // function to build chart surface
+  Widget build(BuildContext context) { // function to build animated chart surface
 
-    if (real.isEmpty) { // nothing to plot
+    if (widget.real.isEmpty) { // nothing to plot
       return const Center(child: Text('No chart data yet')); // empty hint
     }
 
-    return CustomPaint(
-      painter: _MarketChartPainter(
-        real: real,
-        predictions: predictions,
-      ),
-      child: const SizedBox.expand(), // fill parent
-    ); // painted chart
+    final brightness = Theme.of(context).brightness; // dark vs light stroke / dots
+
+    return AnimatedBuilder(
+      animation: _ping,
+      builder: (context, _) {
+        return CustomPaint(
+          painter: _MarketChartPainter(
+            real: widget.real,
+            predictions: widget.predictions,
+            realColor: AppColors.chartRealLine(brightness),
+            predictionColor: AppColors.chartPredictionLine(brightness),
+            dotColor: AppColors.chartPredictionDot(brightness),
+            pingT: _ping.value,
+          ),
+          child: const SizedBox.expand(), // fill parent
+        ); // painted chart
+      },
+    );
 
   }
 
@@ -71,20 +118,28 @@ class MarketChart extends StatelessWidget { // class to paint real (solid) + pre
 
 /*########## MARKET CHART PAINTER ##########*/
 
-class _MarketChartPainter extends CustomPainter { // class to draw dual-series price path
+class _MarketChartPainter extends CustomPainter { // class to draw dual-series price path + ping dots
 
   _MarketChartPainter({
     required this.real,
     required this.predictions,
+    required this.realColor,
+    required this.predictionColor,
+    required this.dotColor,
+    required this.pingT,
   }); // construct painter
 
   final List<OhlcvPoint> real; // solid history
   final List<PredictionPoint> predictions; // dashed forecast
+  final Color realColor; // theme-aware real stroke
+  final Color predictionColor; // theme-aware forecast stroke
+  final Color dotColor; // theme-aware prediction markers
+  final double pingT; // 0..1 ping animation phase
 
   /*########## PAINT ##########*/
 
   @override
-  void paint(Canvas canvas, Size size) { // function to draw real + prediction polylines
+  void paint(Canvas canvas, Size size) { // function to draw real + prediction polylines + dots
 
     final realYs = real.map((p) => p.close).toList(); // history closes
     final predYs = predictions.map((p) => p.predictedClose).toList(); // forecast closes
@@ -122,11 +177,11 @@ class _MarketChartPainter extends CustomPainter { // class to draw dual-series p
     }
 
     final realPaint = Paint()
-      ..color = AppColors.blue
+      ..color = realColor
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.5
       ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round; // solid blue history
+      ..strokeJoin = StrokeJoin.round; // theme real history
     canvas.drawPath(realPath, realPaint); // draw history
 
     if (predictions.isEmpty) { // no forecast overlay
@@ -143,12 +198,39 @@ class _MarketChartPainter extends CustomPainter { // class to draw dual-series p
     }
 
     final predPaint = Paint()
-      ..color = AppColors.green
+      ..color = predictionColor
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.5
       ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round; // green forecast
+      ..strokeJoin = StrokeJoin.round; // theme forecast
     _drawDashedPath(canvas, predPath, predPaint); // dashed overlay
+
+    for (var i = 0; i < predictions.length; i++) { // pinging markers on forecast points
+      final pt = pointAt(real.length + i, predictions[i].predictedClose); // marker center
+      _drawPingingDot(canvas, pt, i); // core + expanding ring
+    }
+
+  }
+
+  /*########## DRAW PINGING DOT ##########*/
+
+  void _drawPingingDot(Canvas canvas, Offset center, int index) { // function to draw core + soft filled ping
+
+    const coreRadius = 3.6; // solid marker size
+    final corePaint = Paint()
+      ..color = dotColor
+      ..style = PaintingStyle.fill; // #FFF / #000 core
+    canvas.drawCircle(center, coreRadius, corePaint); // solid prediction dot
+
+    // Stagger each forecast day so pings feel alive, not synchronized
+    final localT = (pingT + index * 0.18) % 1.0; // phase offset per point
+    final eased = Curves.easeOut.transform(localT); // expand then fade
+    final ringRadius = coreRadius + eased * 14.0; // growing filled circle
+    final ringPaint = Paint()
+      ..color = dotColor.withValues(alpha: (1.0 - eased) * 0.40)
+      ..style = PaintingStyle.fill; // full disc that fades as it grows
+    canvas.drawCircle(center, ringRadius, ringPaint); // translucent expanding ping
+    canvas.drawCircle(center, coreRadius, corePaint); // keep core crisp on top
 
   }
 
@@ -173,9 +255,14 @@ class _MarketChartPainter extends CustomPainter { // class to draw dual-series p
   /*########## SHOULD REPAINT ##########*/
 
   @override
-  bool shouldRepaint(covariant _MarketChartPainter oldDelegate) { // function to repaint when series change
+  bool shouldRepaint(covariant _MarketChartPainter oldDelegate) { // function to repaint when series/theme/ping change
 
-    return oldDelegate.real != real || oldDelegate.predictions != predictions; // data changed
+    return oldDelegate.real != real ||
+        oldDelegate.predictions != predictions ||
+        oldDelegate.realColor != realColor ||
+        oldDelegate.predictionColor != predictionColor ||
+        oldDelegate.dotColor != dotColor ||
+        oldDelegate.pingT != pingT; // data, theme, or ping frame changed
 
   }
 

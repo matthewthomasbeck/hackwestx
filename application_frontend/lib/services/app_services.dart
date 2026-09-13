@@ -21,6 +21,7 @@
 import 'api_service.dart'; // import EC2 HTTP client
 import 'auth_service.dart'; // import Auth0 session owner
 import 'market_store.dart'; // import shared /market state
+import 'theme_store.dart'; // import app-wide light / dark mode
 
 
 
@@ -31,6 +32,7 @@ import 'market_store.dart'; // import shared /market state
 final AuthService authService = AuthService(); // app-wide Auth0 session
 final ApiService apiService = ApiService(); // app-wide EC2 client
 final MarketStore marketStore = MarketStore(apiService); // app-wide SOL market snapshot
+final ThemeStore themeStore = ThemeStore(); // app-wide ThemeMode owner
 
 /*########## SYNC API TOKEN ##########*/
 

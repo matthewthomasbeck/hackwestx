@@ -193,7 +193,14 @@ class _HomePageState extends State<HomePage> { // class to bind MarketStore into
 
         return Scaffold(
           appBar: AppBar(
-            title: const Text('SOL'),
+            title: Text(
+              'SOL',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontSize: (Theme.of(context).textTheme.titleLarge?.fontSize ?? 22) * 2,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.2,
+                  ),
+            ), // brand-forward app bar title
             actions: [
               if (pending)
                 const Padding(
@@ -269,15 +276,7 @@ class _HomePageState extends State<HomePage> { // class to bind MarketStore into
                   height: 240,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(16),
-                    gradient: LinearGradient(
-                      colors: [
-                        AppColors.purple.withValues(alpha: 0.18),
-                        AppColors.blue.withValues(alpha: 0.12),
-                      ],
-                    ),
-                    border: Border.all(
-                      color: AppColors.purple.withValues(alpha: 0.35),
-                    ),
+                    gradient: AppColors.solanaDiagonal, // green → cyan → purple chart bg
                   ),
                   clipBehavior: Clip.antiAlias,
                   child: Padding(
@@ -292,7 +291,7 @@ class _HomePageState extends State<HomePage> { // class to bind MarketStore into
                 _ChartTimeRangeBar(
                   selected: _chartRange,
                   onChanged: (range) => setState(() => _chartRange = range),
-                ), // 1W / 1M / 3M / YTD / Max under chart
+                ), // squarish purple 1W / 1M / 3M / YTD / Max
                 const SizedBox(height: 24),
                 Wrap(
                   spacing: 12,
@@ -319,7 +318,7 @@ class _HomePageState extends State<HomePage> { // class to bind MarketStore into
                       onTap: () => Navigator.of(context).pushNamed(AppRoutes.tradeHistory),
                     ),
                   ],
-                ), // quick-action row
+                ), // ovular Solana-gradient quick actions
               ],
             ),
           ),
@@ -371,7 +370,7 @@ class _ChartTimeRangeBar extends StatelessWidget { // class for MLP-style timefr
 
 /*########## CHART TIME RANGE BUTTON ##########*/
 
-class _ChartTimeRangeButton extends StatelessWidget { // class for one timeframe toggle
+class _ChartTimeRangeButton extends StatelessWidget { // class for squarish purple timeframe toggle
 
   const _ChartTimeRangeButton({
     required this.label,
@@ -386,23 +385,29 @@ class _ChartTimeRangeButton extends StatelessWidget { // class for one timeframe
   /*########## BUILD ##########*/
 
   @override
-  Widget build(BuildContext context) { // function to build inverted-active timeframe chip
+  Widget build(BuildContext context) { // function to build squarish purple range chip
 
-    final bg = selected ? Colors.white : AppColors.purple; // MLP active = inverted
-    final fg = selected ? AppColors.purple : Colors.white; // contrast text
+    final brightness = Theme.of(context).brightness; // dark / light selected fill
+    final bg = selected
+        ? AppColors.timeframeSelectedFill(brightness) // mid dark / mid light
+        : AppColors.solanaPurple; // inactive = purple fill
+    final fg = selected
+        ? AppColors.timeframeSelectedForeground(brightness)
+        : AppColors.whiteLightest; // contrast on purple
+    final borderColor = selected ? fg : AppColors.solanaPurple; // selected border matches text
 
     return Material(
       color: bg,
-      borderRadius: BorderRadius.circular(6),
+      borderRadius: BorderRadius.circular(4), // squarish (not pill)
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(4),
         child: Container(
           alignment: Alignment.center,
           padding: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: AppColors.purple),
+            borderRadius: BorderRadius.circular(4),
+            border: Border.all(color: borderColor, width: 1.5),
           ),
           child: Text(
             label,
@@ -413,7 +418,7 @@ class _ChartTimeRangeButton extends StatelessWidget { // class for one timeframe
           ),
         ),
       ),
-    ); // purple / white toggle
+    ); // squarish purple toggle
 
   }
 
@@ -422,7 +427,7 @@ class _ChartTimeRangeButton extends StatelessWidget { // class for one timeframe
 
 /*########## QUICK ACTION ##########*/
 
-class _QuickAction extends StatelessWidget { // class for compact home navigation chip/button
+class _QuickAction extends StatelessWidget { // class for ovular Solana-gradient home nav button
 
   const _QuickAction({
     required this.label,
@@ -437,13 +442,38 @@ class _QuickAction extends StatelessWidget { // class for compact home navigatio
   /*########## BUILD ##########*/
 
   @override
-  Widget build(BuildContext context) { // function to build one quick-action button
+  Widget build(BuildContext context) { // function to build one gradient pill action
 
-    return FilledButton.tonalIcon(
-      onPressed: onTap,
-      icon: Icon(icon),
-      label: Text(label),
-    ); // tonal action
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999), // ovular / pill
+        child: Ink(
+          decoration: BoxDecoration(
+            gradient: AppColors.solanaDiagonal, // purple LL → cyan → green UR
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 18, color: AppColors.whiteLightest),
+                const SizedBox(width: 8),
+                Text(
+                  label,
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: AppColors.whiteLightest,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ); // ovular Solana gradient action
 
   }
 
