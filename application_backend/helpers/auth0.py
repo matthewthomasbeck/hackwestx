@@ -35,7 +35,9 @@ from flask import jsonify, request # import Flask helpers used by require_auth
 
 ##### load environment #####
 
-load_dotenv() # load Auth0-related environment variables
+from pathlib import Path # resolve .env next to application_backend
+
+load_dotenv(Path(__file__).resolve().parent.parent / ".env") # load Auth0-related environment variables
 
 
 
