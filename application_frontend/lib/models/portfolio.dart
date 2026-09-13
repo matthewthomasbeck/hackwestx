@@ -71,3 +71,20 @@ class PaperTrade { // class to hold one paper buy/sell row for history / receipt
   final bool? forecastCorrect; // optional accuracy badge once backend supports it
 
 }
+
+
+/*########## BUY ORDER ARGS ##########*/
+
+class BuyOrderArgs { // class to pass review-order fields Buy SOL → Confirm
+
+  const BuyOrderArgs({
+    required this.usdAmount,
+    required this.solAmount,
+    required this.price,
+  }); // construct pending paper buy
+
+  final double usdAmount; // USD to spend
+  final double solAmount; // estimated SOL at review time
+  final double price; // spot used for estimate / fill
+
+}

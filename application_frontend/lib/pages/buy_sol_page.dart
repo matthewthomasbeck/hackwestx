@@ -22,9 +22,9 @@ import 'package:flutter/material.dart'; // import Flutter Material UI toolkit
 
 /*##### import local modules #####*/
 
-import '../config.dart'; // import paper starting USD default
+import '../models/portfolio.dart'; // import BuyOrderArgs for confirm handoff
 import '../routes.dart'; // import named route constants
-import '../services/app_services.dart'; // import market store for last close
+import '../services/app_services.dart'; // import market + portfolio stores
 import '../theme/app_theme.dart'; // import direction colors
 
 
@@ -53,7 +53,6 @@ class BuySolPage extends StatefulWidget { // class for amount input + estimated 
 class _BuySolPageState extends State<BuySolPage> { // class to track spend amount text field
 
   final _amountController = TextEditingController(); // USD amount input
-  final double _cashUsd = AppConfig.paperStartingUsd; // stub available cash (wire from portfolio API)
 
   /*########## DISPOSE ##########*/
 
@@ -77,20 +76,62 @@ class _BuySolPageState extends State<BuySolPage> { // class to track spend amoun
 
   }
 
+  /*########## REVIEW ##########*/
+
+  void _reviewBuy(double solPrice, double cashUsd) { // function to validate then open confirm
+
+    final usd = double.tryParse(_amountController.text.trim()); // parse spend
+    if (usd == null || usd <= 0) { // bad amount
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter a USD amount greater than 0')),
+      ); // hint
+      return; // stay
+    }
+    if (usd > cashUsd) { // overspend
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Only \$${cashUsd.toStringAsFixed(2)} available')),
+      ); // hint
+      return; // stay
+    }
+    if (solPrice <= 0) { // no spot
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Load market data before buying')),
+      ); // hint
+      return; // stay
+    }
+
+    final solAmount = usd / solPrice; // preview fill
+    Navigator.of(context).pushNamed(
+      AppRoutes.tradeConfirm,
+      arguments: BuyOrderArgs(
+        usdAmount: usd,
+        solAmount: solAmount,
+        price: solPrice,
+      ),
+    ); // hand off to confirm
+
+  }
+
   /*########## BUILD ##########*/
 
   @override
   Widget build(BuildContext context) { // function to build buy SOL form
 
     return ListenableBuilder(
-      listenable: marketStore, // price updates from /market
+      listenable: Listenable.merge([marketStore, portfolioStore]), // price + cash
       builder: (context, _) {
         final solPrice = marketStore.lastClose ?? 0; // latest close
+        final cashUsd = portfolioStore.cashUsd; // live paper cash
         final estimated = _estimatedSol(solPrice); // live preview
         final preds = marketStore.market?.predictions ?? const []; // forecasts
         final bullish = preds.isNotEmpty &&
             solPrice > 0 &&
             preds.first.predictedClose > solPrice; // Day-1 above spot
+        final usd = double.tryParse(_amountController.text); // for CTA enable
+        final canReview = solPrice > 0 &&
+            usd != null &&
+            usd > 0 &&
+            usd <= cashUsd; // valid paper buy
 
         return Scaffold(
           appBar: AppBar(title: const Text('Buy SOL')),
@@ -100,7 +141,7 @@ class _BuySolPageState extends State<BuySolPage> { // class to track spend amoun
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  'Available: \$${_cashUsd.toStringAsFixed(2)}',
+                  'Available: \$${cashUsd.toStringAsFixed(2)}',
                   style: Theme.of(context).textTheme.titleMedium,
                 ), // paper USD balance
                 const SizedBox(height: 8),
@@ -148,25 +189,25 @@ class _BuySolPageState extends State<BuySolPage> { // class to track spend amoun
                     return Container(
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(999),
-                        boxShadow: AppColors.solanaGlow(strength: 0.7),
+                        boxShadow: canReview
+                            ? AppColors.solanaGlow(strength: 0.7)
+                            : null,
                       ),
                       child: Material(
                         color: Colors.transparent,
                         child: InkWell(
-                          onTap: solPrice <= 0
-                              ? null
-                              : () {
-                                  Navigator.of(context).pushNamed(AppRoutes.tradeConfirm);
-                                },
+                          onTap: canReview
+                              ? () => _reviewBuy(solPrice, cashUsd)
+                              : null,
                           borderRadius: BorderRadius.circular(999),
                           child: Ink(
                             decoration: BoxDecoration(
-                              gradient: solPrice <= 0
-                                  ? null
-                                  : AppColors.solanaDiagonal,
-                              color: solPrice <= 0
-                                  ? Theme.of(context).disabledColor
+                              gradient: canReview
+                                  ? AppColors.solanaDiagonal
                                   : null,
+                              color: canReview
+                                  ? null
+                                  : Theme.of(context).disabledColor,
                               borderRadius: BorderRadius.circular(999),
                             ),
                             child: Padding(

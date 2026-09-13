@@ -75,7 +75,13 @@ class _SettingsPageState extends State<SettingsPage> { // class for profile / th
       ),
     ); // confirm dialog
     if (ok == true) {
-      // TODO: call paper reset API / clear local ledger
+      portfolioStore.reset(); // clear local paper cash / holdings / history
+      if (!mounted) { // disposed during dialog
+        return; // bail
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Paper account reset to \$10,000')),
+      ); // confirm reset
     }
 
   }

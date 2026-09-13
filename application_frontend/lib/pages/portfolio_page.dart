@@ -23,6 +23,7 @@ import 'package:flutter/material.dart'; // import Flutter Material UI toolkit
 /*##### import local modules #####*/
 
 import '../config.dart'; // import paper starting USD
+import '../services/app_services.dart'; // import portfolio + market stores
 import '../theme/app_theme.dart'; // import P&L colors
 
 
@@ -45,56 +46,69 @@ class PortfolioPage extends StatelessWidget { // class for cash / holdings / unr
   @override
   Widget build(BuildContext context) { // function to build paper portfolio layout
 
-    // TODO: load PaperPortfolio from paper-trade API / local ledger
-    const cash = AppConfig.paperStartingUsd; // stub cash
-    const solHeld = 0.0; // stub holdings
-    const avgBuy = 0.0; // stub avg entry
-    const currentValue = cash; // stub mark-to-market
-    const pnl = 0.0; // stub P&L
+    return ListenableBuilder(
+      listenable: Listenable.merge([portfolioStore, marketStore]), // ledger + spot
+      builder: (context, _) {
+        final portfolio = portfolioStore.snapshot; // live holdings
+        final solPrice = marketStore.lastClose ?? 0; // mark price
+        final currentValue = portfolio.marketValue(solPrice); // cash + SOL MTM
+        final pnl = portfolio.unrealizedPnl(solPrice); // vs avg buy
+        final avgBuy = portfolio.avgBuyPrice; // entry
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Paper Portfolio')),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          Text(
-            'Portfolio value',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          Text(
-            '\$${currentValue.toStringAsFixed(2)}',
-            style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                  fontWeight: FontWeight.bold,
+        return Scaffold(
+          appBar: AppBar(title: const Text('Paper Portfolio')),
+          body: ListView(
+            padding: const EdgeInsets.all(20),
+            children: [
+              Text(
+                'Portfolio value',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              Text(
+                '\$${currentValue.toStringAsFixed(2)}',
+                style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ), // current value
+              Text(
+                'Started at \$${AppConfig.paperStartingUsd.toStringAsFixed(0)}',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+              ),
+              const SizedBox(height: 24),
+              _StatRow(
+                label: 'Cash available',
+                value: '\$${portfolio.cashUsd.toStringAsFixed(2)}',
+              ),
+              _StatRow(
+                label: 'SOL held',
+                value: portfolio.solHeld.toStringAsFixed(4),
+              ),
+              _StatRow(
+                label: 'Avg buy price',
+                value: avgBuy <= 0 ? '—' : '\$${avgBuy.toStringAsFixed(2)}',
+              ),
+              _StatRow(
+                label: 'Unrealized P&L',
+                value: '\$${pnl.toStringAsFixed(2)}',
+                valueColor: pnl >= 0 ? AppColors.green : AppColors.red,
+              ),
+              const SizedBox(height: 24),
+              Container(
+                height: 120,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
                 ),
-          ), // current value
-          Text(
-            'Started at \$${AppConfig.paperStartingUsd.toStringAsFixed(0)}',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
+                child: const Text('Portfolio sparkline stub'), // optional mini chart later
+              ),
+            ],
           ),
-          const SizedBox(height: 24),
-          _StatRow(label: 'Cash available', value: '\$${cash.toStringAsFixed(2)}'),
-          _StatRow(label: 'SOL held', value: solHeld.toStringAsFixed(4)),
-          _StatRow(label: 'Avg buy price', value: avgBuy <= 0 ? '—' : '\$${avgBuy.toStringAsFixed(2)}'),
-          _StatRow(
-            label: 'Unrealized P&L',
-            value: '\$${pnl.toStringAsFixed(2)}',
-            valueColor: pnl >= 0 ? AppColors.green : AppColors.red,
-          ),
-          const SizedBox(height: 24),
-          Container(
-            height: 120,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              color: Theme.of(context).colorScheme.surfaceContainerHighest,
-            ),
-            child: const Text('Portfolio sparkline stub'), // optional mini chart later
-          ),
-        ],
-      ),
-    ); // portfolio scaffold
+        ); // portfolio scaffold
+      },
+    );
 
   }
 

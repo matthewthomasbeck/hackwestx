@@ -22,7 +22,9 @@ import 'package:flutter/material.dart'; // import Flutter Material UI toolkit
 
 /*##### import local modules #####*/
 
+import '../models/portfolio.dart'; // import BuyOrderArgs / PaperTrade
 import '../routes.dart'; // import named route constants
+import '../services/app_services.dart'; // import portfolioStore for paper fill
 import '../theme/app_theme.dart'; // import success green glow tokens
 
 
@@ -51,17 +53,58 @@ class TradeConfirmPage extends StatefulWidget { // class for confirm step then s
 class _TradeConfirmPageState extends State<TradeConfirmPage> { // class to toggle confirm vs receipt
 
   bool _confirmed = false; // False = review, True = receipt
-  String _tradeId = 'paper-stub-0001'; // placeholder receipt id
+  bool _submitting = false; // guard double-tap
+  PaperTrade? _filled; // receipt after successful buy
+  String? _error; // fill failure message
+
+  /*########## ORDER ARGS ##########*/
+
+  BuyOrderArgs? get _order { // function to read Buy SOL handoff args
+
+    final args = ModalRoute.of(context)?.settings.arguments; // route args
+    if (args is BuyOrderArgs) { // expected type
+      return args; // pending order
+    }
+    return null; // opened without buy flow
+
+  }
 
   /*########## CONFIRM ##########*/
 
-  Future<void> _confirm() async { // function to stub paper fill then show receipt
+  Future<void> _confirm() async { // function to fill paper buy then show receipt
 
-    // TODO: POST paper-trade buy API, then set real trade id / fill fields
+    final order = _order; // pending review
+    if (order == null || _submitting) { // nothing to fill / in flight
+      return; // bail
+    }
+
     setState(() {
-      _confirmed = true; // flip to receipt view
-      _tradeId = 'paper-${DateTime.now().millisecondsSinceEpoch}'; // stub id
+      _submitting = true; // lock CTA
+      _error = null; // clear prior
     });
+
+    try {
+      final trade = portfolioStore.buy(
+        usdAmount: order.usdAmount,
+        price: order.price,
+      ); // debit cash / credit SOL
+      if (!mounted) { // disposed during await
+        return; // bail
+      }
+      setState(() {
+        _filled = trade; // receipt fields
+        _confirmed = true; // flip to receipt view
+        _submitting = false; // unlock
+      });
+    } catch (e) {
+      if (!mounted) { // disposed during await
+        return; // bail
+      }
+      setState(() {
+        _submitting = false; // unlock
+        _error = e.toString(); // show under summary
+      });
+    }
 
   }
 
@@ -70,7 +113,10 @@ class _TradeConfirmPageState extends State<TradeConfirmPage> { // class to toggl
   @override
   Widget build(BuildContext context) { // function to build confirm or receipt UI
 
-    if (_confirmed) { // success receipt
+    final order = _order; // pending or null
+    final filled = _filled; // post-fill trade
+
+    if (_confirmed && filled != null) { // success receipt
       return Scaffold(
         appBar: AppBar(title: const Text('Trade Receipt')),
         body: Padding(
@@ -94,9 +140,26 @@ class _TradeConfirmPageState extends State<TradeConfirmPage> { // class to toggl
               ),
               const SizedBox(height: 8),
               Text(
-                'Trade ID: $_tradeId',
+                'Trade ID: ${filled.id}',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 24),
+              _SummaryRow(
+                label: 'USD spent',
+                value: '\$${filled.usdAmount.toStringAsFixed(2)}',
+              ),
+              _SummaryRow(
+                label: 'SOL bought',
+                value: filled.solAmount.toStringAsFixed(4),
+              ),
+              _SummaryRow(
+                label: 'Price used',
+                value: '\$${filled.price.toStringAsFixed(2)}',
+              ),
+              _SummaryRow(
+                label: 'Timestamp',
+                value: _formatTime(filled.timestamp),
               ),
               const Spacer(),
               FilledButton(
@@ -117,6 +180,34 @@ class _TradeConfirmPageState extends State<TradeConfirmPage> { // class to toggl
       ); // receipt scaffold
     }
 
+    if (order == null) { // deep-link / missing args
+      return Scaffold(
+        appBar: AppBar(title: const Text('Confirm Buy')),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'No pending order. Start from Buy SOL.',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
+                const SizedBox(height: 16),
+                FilledButton(
+                  onPressed: () => Navigator.of(context).pushReplacementNamed(
+                    AppRoutes.buySol,
+                  ),
+                  child: const Text('Buy SOL'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ); // missing-order scaffold
+    }
+
     return Scaffold(
       appBar: AppBar(title: const Text('Confirm Buy')),
       body: Padding(
@@ -126,24 +217,57 @@ class _TradeConfirmPageState extends State<TradeConfirmPage> { // class to toggl
           children: [
             Text('Order summary', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 16),
-            const _SummaryRow(label: 'USD spent', value: '\$—'),
-            const _SummaryRow(label: 'SOL bought', value: '—'),
-            const _SummaryRow(label: 'Price used', value: '\$—'),
-            const _SummaryRow(label: 'Timestamp', value: '—'),
+            _SummaryRow(
+              label: 'USD spent',
+              value: '\$${order.usdAmount.toStringAsFixed(2)}',
+            ),
+            _SummaryRow(
+              label: 'SOL bought',
+              value: order.solAmount.toStringAsFixed(4),
+            ),
+            _SummaryRow(
+              label: 'Price used',
+              value: '\$${order.price.toStringAsFixed(2)}',
+            ),
+            _SummaryRow(
+              label: 'Timestamp',
+              value: _formatTime(DateTime.now()),
+            ),
+            if (_error != null) ...[
+              const SizedBox(height: 16),
+              Text(
+                _error!,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            ],
             const Spacer(),
             FilledButton(
-              onPressed: _confirm,
-              child: const Text('Confirm'),
+              onPressed: _submitting ? null : _confirm,
+              child: Text(_submitting ? 'Submitting…' : 'Confirm'),
             ),
             const SizedBox(height: 8),
             OutlinedButton(
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: _submitting ? null : () => Navigator.of(context).pop(),
               child: const Text('Cancel'),
             ),
           ],
         ),
       ),
     ); // confirm scaffold
+
+  }
+
+  /*########## FORMAT TIME ##########*/
+
+  String _formatTime(DateTime dt) { // function to show local fill / preview time
+
+    final local = dt.toLocal(); // device zone
+    final y = local.year.toString().padLeft(4, '0');
+    final m = local.month.toString().padLeft(2, '0');
+    final d = local.day.toString().padLeft(2, '0');
+    final h = local.hour.toString().padLeft(2, '0');
+    final min = local.minute.toString().padLeft(2, '0');
+    return '$y-$m-$d $h:$min'; // compact stamp
 
   }
 
