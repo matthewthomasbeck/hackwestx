@@ -24,6 +24,7 @@ import 'package:flutter/material.dart'; // import Flutter Material UI toolkit
 
 import '../routes.dart'; // import named route constants
 import '../services/app_services.dart'; // import Auth0 session + market store
+import '../theme/app_theme.dart'; // import black / Solana splash colors
 import '../widgets/solana_logo.dart'; // import three-bar Solana mark
 
 
@@ -138,11 +139,11 @@ class _LoadingPageState extends State<LoadingPage>
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Color(0xFF0B0F1A),
-              Color(0xFF1A1040),
-              Color(0xFF0D1B2A),
+              AppColors.blackDarkest,
+              AppColors.blackMid,
+              Color(0xFF1A1528),
             ],
-          ), // purple / blue night gradient
+          ), // near-black with soft Solana-tint depth
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

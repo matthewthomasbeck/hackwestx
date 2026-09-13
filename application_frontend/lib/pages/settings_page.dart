@@ -24,6 +24,7 @@ import 'package:flutter/material.dart'; // import Flutter Material UI toolkit
 
 import '../routes.dart'; // import named route constants
 import '../services/app_services.dart'; // import Auth0 profile / logout
+import '../theme/app_theme.dart'; // import light/dark neutral switch colors
 
 
 
@@ -114,10 +115,39 @@ class _SettingsPageState extends State<SettingsPage> { // class for profile / th
                 subtitle: Text(displayEmail), // Auth0 email
                 leading: const Icon(Icons.person_outline),
               ),
-              SwitchListTile(
-                title: const Text('Dark mode'),
-                value: themeStore.isDark,
-                onChanged: themeStore.setDarkMode, // flips app ThemeMode
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Appearance',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _ThemeModeChip(
+                            label: 'Dark mode',
+                            selected: themeStore.isDark,
+                            useDarkColors: true, // dark neutrals on this chip
+                            onTap: () => themeStore.setDarkMode(true),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _ThemeModeChip(
+                            label: 'Light mode',
+                            selected: !themeStore.isDark,
+                            useDarkColors: false, // light neutrals on this chip
+                            onTap: () => themeStore.setDarkMode(false),
+                          ),
+                        ),
+                      ],
+                    ), // Dark / Light chips — selected state moves with theme
+                  ],
+                ),
               ),
               ListTile(
                 leading: const Icon(Icons.restart_alt),
@@ -144,6 +174,63 @@ class _SettingsPageState extends State<SettingsPage> { // class for profile / th
         },
       ),
     ); // settings scaffold
+
+  }
+
+}
+
+
+/*########## THEME MODE CHIP ##########*/
+
+class _ThemeModeChip extends StatelessWidget { // class for Dark / Light appearance picker chip
+
+  const _ThemeModeChip({
+    required this.label,
+    required this.selected,
+    required this.useDarkColors,
+    required this.onTap,
+  }); // construct chip
+
+  final String label; // Dark mode / Light mode
+  final bool selected; // currently active theme
+  final bool useDarkColors; // true → black neutrals, false → white neutrals
+  final VoidCallback onTap; // select this mode
+
+  /*########## BUILD ##########*/
+
+  @override
+  Widget build(BuildContext context) { // function to build one themed mode chip
+
+    final bg = useDarkColors ? AppColors.blackMid : AppColors.whiteMid; // chip fill
+    final fg = useDarkColors ? AppColors.whiteLightest : AppColors.blackDarkest; // chip text
+    final border = selected
+        ? AppColors.solanaCyan
+        : (useDarkColors ? AppColors.blackLightest : AppColors.whiteDarkest); // selected ring
+
+    return Material(
+      color: bg,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          alignment: Alignment.center,
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: border, width: selected ? 2.5 : 1.5),
+          ),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: fg,
+                  fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                ),
+          ),
+        ),
+      ),
+    ); // dark-colored or light-colored mode chip
 
   }
 

@@ -23,7 +23,7 @@ import 'package:flutter/material.dart'; // import Flutter painting helpers (incl
 /*##### import local modules #####*/
 
 import '../models/market.dart'; // import OHLCV / prediction points
-import '../theme/app_theme.dart'; // import brand + chart line colors
+import '../theme/app_theme.dart'; // import Solana gradient
 
 
 
@@ -92,8 +92,6 @@ class _MarketChartState extends State<MarketChart>
       return const Center(child: Text('No chart data yet')); // empty hint
     }
 
-    final brightness = Theme.of(context).brightness; // dark vs light stroke / dots
-
     return AnimatedBuilder(
       animation: _ping,
       builder: (context, _) {
@@ -101,9 +99,6 @@ class _MarketChartState extends State<MarketChart>
           painter: _MarketChartPainter(
             real: widget.real,
             predictions: widget.predictions,
-            realColor: AppColors.chartRealLine(brightness),
-            predictionColor: AppColors.chartPredictionLine(brightness),
-            dotColor: AppColors.chartPredictionDot(brightness),
             pingT: _ping.value,
           ),
           child: const SizedBox.expand(), // fill parent
@@ -118,28 +113,22 @@ class _MarketChartState extends State<MarketChart>
 
 /*########## MARKET CHART PAINTER ##########*/
 
-class _MarketChartPainter extends CustomPainter { // class to draw dual-series price path + ping dots
+class _MarketChartPainter extends CustomPainter { // class to draw gradient real + forecast + dots
 
   _MarketChartPainter({
     required this.real,
     required this.predictions,
-    required this.realColor,
-    required this.predictionColor,
-    required this.dotColor,
     required this.pingT,
   }); // construct painter
 
   final List<OhlcvPoint> real; // solid history
   final List<PredictionPoint> predictions; // dashed forecast
-  final Color realColor; // theme-aware real stroke
-  final Color predictionColor; // theme-aware forecast stroke
-  final Color dotColor; // theme-aware prediction markers
   final double pingT; // 0..1 ping animation phase
 
   /*########## PAINT ##########*/
 
   @override
-  void paint(Canvas canvas, Size size) { // function to draw real + prediction polylines + dots
+  void paint(Canvas canvas, Size size) { // function to draw gradient polylines + dots
 
     final realYs = real.map((p) => p.close).toList(); // history closes
     final predYs = predictions.map((p) => p.predictedClose).toList(); // forecast closes
@@ -156,6 +145,7 @@ class _MarketChartPainter extends CustomPainter { // class to draw dual-series p
 
     final totalPoints = real.length + predictions.length; // x span
     final dx = totalPoints <= 1 ? size.width : size.width / (totalPoints - 1); // step
+    final shader = AppColors.solanaDiagonal.createShader(Offset.zero & size); // shared Solana stroke fill
 
     double yFor(double price) { // map price → canvas y
       final t = (price - minY) / (maxY - minY); // 0..1
@@ -177,11 +167,11 @@ class _MarketChartPainter extends CustomPainter { // class to draw dual-series p
     }
 
     final realPaint = Paint()
-      ..color = realColor
+      ..shader = shader
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.5
       ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round; // theme real history
+      ..strokeJoin = StrokeJoin.round; // gradient real history
     canvas.drawPath(realPath, realPaint); // draw history
 
     if (predictions.isEmpty) { // no forecast overlay
@@ -189,7 +179,6 @@ class _MarketChartPainter extends CustomPainter { // class to draw dual-series p
     }
 
     final predPath = Path(); // dashed forecast path
-    // Bridge from last real close into first prediction for continuity
     final bridgeStart = pointAt(real.length - 1, real.last.close); // last real
     predPath.moveTo(bridgeStart.dx, bridgeStart.dy); // start at last real
     for (var i = 0; i < predictions.length; i++) { // each forecast
@@ -198,38 +187,42 @@ class _MarketChartPainter extends CustomPainter { // class to draw dual-series p
     }
 
     final predPaint = Paint()
-      ..color = predictionColor
+      ..shader = shader
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.5
       ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round; // theme forecast
+      ..strokeJoin = StrokeJoin.round; // gradient forecast
     _drawDashedPath(canvas, predPath, predPaint); // dashed overlay
 
     for (var i = 0; i < predictions.length; i++) { // pinging markers on forecast points
       final pt = pointAt(real.length + i, predictions[i].predictedClose); // marker center
-      _drawPingingDot(canvas, pt, i); // core + expanding ring
+      _drawPingingDot(canvas, pt, i, shader); // gradient core + ping
     }
 
   }
 
   /*########## DRAW PINGING DOT ##########*/
 
-  void _drawPingingDot(Canvas canvas, Offset center, int index) { // function to draw core + soft filled ping
+  void _drawPingingDot(Canvas canvas, Offset center, int index, Shader shader) { // function to draw gradient core + soft ping
 
     const coreRadius = 3.6; // solid marker size
     final corePaint = Paint()
-      ..color = dotColor
-      ..style = PaintingStyle.fill; // #FFF / #000 core
-    canvas.drawCircle(center, coreRadius, corePaint); // solid prediction dot
+      ..shader = shader
+      ..style = PaintingStyle.fill; // gradient core
+    canvas.drawCircle(center, coreRadius, corePaint); // prediction dot
 
-    // Stagger each forecast day so pings feel alive, not synchronized
     final localT = (pingT + index * 0.18) % 1.0; // phase offset per point
     final eased = Curves.easeOut.transform(localT); // expand then fade
-    final ringRadius = coreRadius + eased * 14.0; // growing filled circle
+    final ringRadius = coreRadius + eased * 18.0; // growing filled circle
     final ringPaint = Paint()
-      ..color = dotColor.withValues(alpha: (1.0 - eased) * 0.40)
-      ..style = PaintingStyle.fill; // full disc that fades as it grows
+      ..shader = shader
+      ..style = PaintingStyle.fill;
+    canvas.saveLayer(
+      Rect.fromCircle(center: center, radius: ringRadius + 2),
+      Paint()..color = Color.fromRGBO(255, 255, 255, (1.0 - eased) * 0.80),
+    ); // twice-as-strong fade ping as it expands
     canvas.drawCircle(center, ringRadius, ringPaint); // translucent expanding ping
+    canvas.restore();
     canvas.drawCircle(center, coreRadius, corePaint); // keep core crisp on top
 
   }
@@ -255,14 +248,11 @@ class _MarketChartPainter extends CustomPainter { // class to draw dual-series p
   /*########## SHOULD REPAINT ##########*/
 
   @override
-  bool shouldRepaint(covariant _MarketChartPainter oldDelegate) { // function to repaint when series/theme/ping change
+  bool shouldRepaint(covariant _MarketChartPainter oldDelegate) { // function to repaint when series/ping change
 
     return oldDelegate.real != real ||
         oldDelegate.predictions != predictions ||
-        oldDelegate.realColor != realColor ||
-        oldDelegate.predictionColor != predictionColor ||
-        oldDelegate.dotColor != dotColor ||
-        oldDelegate.pingT != pingT; // data, theme, or ping frame changed
+        oldDelegate.pingT != pingT; // data or ping frame changed
 
   }
 

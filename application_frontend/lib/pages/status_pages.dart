@@ -180,7 +180,7 @@ class _PendingStatusPageState extends State<PendingStatusPage> { // class to pol
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const CircularProgressIndicator(color: AppColors.purple), // LSTM wait spinner
+              const CircularProgressIndicator(color: AppColors.solanaCyan), // LSTM wait spinner
               const SizedBox(height: 24),
               Text(
                 'Generating predictions...',

@@ -193,14 +193,15 @@ class _HomePageState extends State<HomePage> { // class to bind MarketStore into
 
         return Scaffold(
           appBar: AppBar(
+            toolbarHeight: 84, // room for enlarged SOL title
             title: Text(
               'SOL',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontSize: (Theme.of(context).textTheme.titleLarge?.fontSize ?? 22) * 2,
+              style: Theme.of(context).textTheme.displaySmall?.copyWith(
                     fontWeight: FontWeight.w800,
                     letterSpacing: 1.2,
+                    height: 1.0,
                   ),
-            ), // brand-forward app bar title
+            ), // largest brand mark in the app bar
             actions: [
               if (pending)
                 const Padding(
@@ -231,19 +232,19 @@ class _HomePageState extends State<HomePage> { // class to bind MarketStore into
               children: [
                 Text(
                   _formatPrice(price),
-                  style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                  style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
-                ), // current SOL price
+                ), // SOL price — second-largest after SOL title
                 Text.rich(
                   TextSpan(
-                    style: Theme.of(context).textTheme.bodyMedium,
+                    style: Theme.of(context).textTheme.titleMedium,
                     children: [
                       TextSpan(
                         text: _formatChange(change),
                         style: TextStyle(
                           color: changeColor,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w700,
                         ),
                       ), // range % green/red
                       TextSpan(
@@ -252,7 +253,7 @@ class _HomePageState extends State<HomePage> { // class to bind MarketStore into
                       ), // neutral stamp
                     ],
                   ),
-                ), // range % change + timestamp
+                ), // enlarged % change + timestamp
                 if (pending) ...[
                   const SizedBox(height: 8),
                   Text(
@@ -273,18 +274,26 @@ class _HomePageState extends State<HomePage> { // class to bind MarketStore into
                 ],
                 const SizedBox(height: 20),
                 Container(
-                  height: 240,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(16),
-                    gradient: AppColors.solanaDiagonal, // green → cyan → purple chart bg
+                    gradient: AppColors.solanaDiagonal, // gradient as border
+                    boxShadow: AppColors.solanaGlow(strength: 0.85),
                   ),
-                  clipBehavior: Clip.antiAlias,
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: MarketChart(
-                      real: _windowedReal(market?.real ?? const []),
-                      predictions: market?.predictions ?? const [],
-                    ), // windowed real + full predictions dashed
+                  padding: const EdgeInsets.all(3), // border thickness
+                  child: Container(
+                    height: 240,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(13),
+                      color: Theme.of(context).scaffoldBackgroundColor, // match page canvas (white / black)
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: MarketChart(
+                        real: _windowedReal(market?.real ?? const []),
+                        predictions: market?.predictions ?? const [],
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -292,33 +301,35 @@ class _HomePageState extends State<HomePage> { // class to bind MarketStore into
                   selected: _chartRange,
                   onChanged: (range) => setState(() => _chartRange = range),
                 ), // squarish purple 1W / 1M / 3M / YTD / Max
-                const SizedBox(height: 24),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
+                const SizedBox(height: 28),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     _QuickAction(
                       label: 'Forecast',
                       icon: Icons.timeline,
                       onTap: () => Navigator.of(context).pushNamed(AppRoutes.forecastDetail),
                     ),
+                    const SizedBox(height: 22),
                     _QuickAction(
                       label: 'Portfolio',
                       icon: Icons.pie_chart_outline,
                       onTap: () => Navigator.of(context).pushNamed(AppRoutes.portfolio),
                     ),
+                    const SizedBox(height: 22),
                     _QuickAction(
                       label: 'Buy SOL',
                       icon: Icons.shopping_cart_outlined,
                       onTap: () => Navigator.of(context).pushNamed(AppRoutes.buySol),
                     ),
+                    const SizedBox(height: 22),
                     _QuickAction(
                       label: 'History',
                       icon: Icons.history,
                       onTap: () => Navigator.of(context).pushNamed(AppRoutes.tradeHistory),
                     ),
                   ],
-                ), // ovular Solana-gradient quick actions
+                ), // full-width stacked Solana-gradient actions
               ],
             ),
           ),
@@ -442,33 +453,41 @@ class _QuickAction extends StatelessWidget { // class for ovular Solana-gradient
   /*########## BUILD ##########*/
 
   @override
-  Widget build(BuildContext context) { // function to build one gradient pill action
+  Widget build(BuildContext context) { // function to build one full-width gradient pill
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(999), // ovular / pill
-        child: Ink(
-          decoration: BoxDecoration(
-            gradient: AppColors.solanaDiagonal, // purple LL → cyan → green UR
-            borderRadius: BorderRadius.circular(999),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(icon, size: 18, color: AppColors.whiteLightest),
-                const SizedBox(width: 8),
-                Text(
-                  label,
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: AppColors.whiteLightest,
-                        fontWeight: FontWeight.w700,
-                      ),
-                ),
-              ],
+    final onGradient = AppColors.onSolanaGradient(Theme.of(context).brightness); // white / black by mode
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(999),
+        boxShadow: AppColors.solanaGlow(strength: 0.7), // soft Solana aura
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(999), // ovular / pill
+          child: Ink(
+            decoration: BoxDecoration(
+              gradient: AppColors.solanaDiagonal, // purple LL → cyan → green UR
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(icon, size: 22, color: onGradient),
+                  const SizedBox(width: 10),
+                  Text(
+                    label,
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          color: onGradient,
+                          fontWeight: FontWeight.w700,
+                        ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

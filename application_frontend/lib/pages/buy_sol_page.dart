@@ -141,14 +141,51 @@ class _BuySolPageState extends State<BuySolPage> { // class to track spend amoun
                       ),
                 ), // forecast-aware hint
                 const Spacer(),
-                FilledButton(
-                  onPressed: solPrice <= 0
-                      ? null
-                      : () {
-                          Navigator.of(context).pushNamed(AppRoutes.tradeConfirm);
-                        },
-                  child: const Text('Review Buy'),
-                ), // go to confirm / receipt
+                Builder(
+                  builder: (context) {
+                    final onGradient =
+                        AppColors.onSolanaGradient(Theme.of(context).brightness);
+                    return Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(999),
+                        boxShadow: AppColors.solanaGlow(strength: 0.7),
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: solPrice <= 0
+                              ? null
+                              : () {
+                                  Navigator.of(context).pushNamed(AppRoutes.tradeConfirm);
+                                },
+                          borderRadius: BorderRadius.circular(999),
+                          child: Ink(
+                            decoration: BoxDecoration(
+                              gradient: solPrice <= 0
+                                  ? null
+                                  : AppColors.solanaDiagonal,
+                              color: solPrice <= 0
+                                  ? Theme.of(context).disabledColor
+                                  : null,
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              child: Text(
+                                'Review Buy',
+                                textAlign: TextAlign.center,
+                                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                                      color: onGradient,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ); // glowing Solana-gradient review CTA
+                  },
+                ),
               ],
             ),
           ),

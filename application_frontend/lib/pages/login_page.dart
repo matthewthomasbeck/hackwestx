@@ -136,10 +136,9 @@ class _LoginPageState extends State<LoginPage> { // class to run Auth0 login + s
               const SizedBox(height: 40), // spacer before CTA
               DecoratedBox(
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(14),
-                  gradient: const LinearGradient(
-                    colors: [AppColors.purple, AppColors.blue],
-                  ), // purple → blue CTA
+                  borderRadius: BorderRadius.circular(999),
+                  gradient: AppColors.solanaDiagonal, // purple → cyan → green CTA
+                  boxShadow: AppColors.solanaGlow(strength: 0.7),
                 ),
                 child: ElevatedButton(
                   onPressed: _busy ? null : _signIn, // Auth0 Universal Login
@@ -147,16 +146,23 @@ class _LoginPageState extends State<LoginPage> { // class to run Auth0 login + s
                     backgroundColor: Colors.transparent,
                     shadowColor: Colors.transparent,
                     disabledBackgroundColor: Colors.transparent,
-                    foregroundColor: Colors.white,
+                    foregroundColor: AppColors.onSolanaGradient(
+                      Theme.of(context).brightness,
+                    ),
                     padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(999),
+                    ),
                   ),
                   child: _busy
-                      ? const SizedBox(
+                      ? SizedBox(
                           height: 22,
                           width: 22,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: Colors.white,
+                            color: AppColors.onSolanaGradient(
+                              Theme.of(context).brightness,
+                            ),
                           ),
                         )
                       : const Text('Sign in with Auth0'), // primary CTA
