@@ -22,6 +22,7 @@ import 'package:flutter/material.dart'; // import Flutter Material UI toolkit
 
 /*##### import local modules #####*/
 
+import '../models/market.dart'; // import OHLCV / prediction points for chart windowing
 import '../routes.dart'; // import named route constants
 import '../services/app_services.dart'; // import shared market store
 import '../theme/app_theme.dart'; // import brand color tokens
@@ -29,6 +30,29 @@ import '../widgets/market_chart.dart'; // import real + prediction chart
 
 
 
+
+
+/*##################################################*/
+/*############### CHART TIME RANGE #################*/
+/*##################################################*/
+
+
+/*########## CHART TIME RANGE ##########*/
+
+enum _ChartTimeRange { // enum for ML-portfolio-style chart window buttons
+
+  week(7, '1W'), // last ~7 trading days
+  month(30, '1M'), // last ~30 days
+  threeMonths(90, '3M'), // last ~90 days
+  year(365, 'YTD'), // last ~365 days
+  max(null, 'Max'); // full history from API
+
+  const _ChartTimeRange(this.days, this.label); // days null = no trim
+
+  final int? days; // lookback in calendar days; null keeps entire series
+  final String label; // compact button label (matches small-screen MLP buttons)
+
+}
 
 
 /*##################################################*/
@@ -52,6 +76,8 @@ class HomePage extends StatefulWidget { // class for SOL price header + chart + 
 
 class _HomePageState extends State<HomePage> { // class to bind MarketStore into home UI
 
+  _ChartTimeRange _chartRange = _ChartTimeRange.week; // default to one week like MLP
+
   /*########## INIT STATE ##########*/
 
   @override
@@ -61,6 +87,36 @@ class _HomePageState extends State<HomePage> { // class to bind MarketStore into
     if (marketStore.market == null && !marketStore.loading) { // cold open without splash fetch
       marketStore.ensureData(); // load (+ refresh if empty)
     }
+
+  }
+
+  /*########## WINDOW REAL SERIES ##########*/
+
+  List<OhlcvPoint> _windowedReal(List<OhlcvPoint> real) { // function to trim history to selected range
+
+    final days = _chartRange.days; // lookback or null for max
+    if (days == null || real.isEmpty) { // Max / empty
+      return real; // full series
+    }
+    final cutoff = real.last.time.subtract(Duration(days: days)); // inclusive window from latest bar
+    return real.where((p) => !p.time.isBefore(cutoff)).toList(); // keep bars in window
+
+  }
+
+  /*########## RANGE PERCENT CHANGE ##########*/
+
+  double? _rangePercentChange(List<OhlcvPoint> real) { // function to % move over selected chart window
+
+    final windowed = _windowedReal(real); // same bars as chart range
+    if (windowed.length < 2) { // need start + end
+      return null; // unknown
+    }
+    final start = windowed.first.close; // close at start of window
+    final end = windowed.last.close; // latest close
+    if (start == 0) { // avoid divide-by-zero
+      return null; // unknown
+    }
+    return ((end - start) / start) * 100.0; // window return
 
   }
 
@@ -128,10 +184,11 @@ class _HomePageState extends State<HomePage> { // class to bind MarketStore into
       builder: (context, _) {
         final market = marketStore.market; // current snapshot
         final price = marketStore.lastClose; // latest close
-        final change = marketStore.percentChange; // day change
+        final change = _rangePercentChange(market?.real ?? const []); // % over active 1W/1M/… window
+        final muted = Theme.of(context).colorScheme.onSurfaceVariant; // timestamp / neutral
         final changeColor = change == null
-            ? Theme.of(context).colorScheme.onSurfaceVariant
-            : (change >= 0 ? AppColors.green : AppColors.red); // direction color
+            ? muted
+            : (change >= 0 ? AppColors.green : AppColors.red); // green up / red down
         final pending = market?.isPending == true || marketStore.refreshing; // forecasts in flight
 
         return Scaffold(
@@ -171,12 +228,24 @@ class _HomePageState extends State<HomePage> { // class to bind MarketStore into
                         fontWeight: FontWeight.bold,
                       ),
                 ), // current SOL price
-                Text(
-                  '${_formatChange(change)}  ·  last updated ${_formatUpdated(market?.updatedAt)}',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: changeColor,
-                      ),
-                ), // % change + timestamp
+                Text.rich(
+                  TextSpan(
+                    style: Theme.of(context).textTheme.bodyMedium,
+                    children: [
+                      TextSpan(
+                        text: _formatChange(change),
+                        style: TextStyle(
+                          color: changeColor,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ), // range % green/red
+                      TextSpan(
+                        text: '  ·  last updated ${_formatUpdated(market?.updatedAt)}',
+                        style: TextStyle(color: muted),
+                      ), // neutral stamp
+                    ],
+                  ),
+                ), // range % change + timestamp
                 if (pending) ...[
                   const SizedBox(height: 8),
                   Text(
@@ -214,11 +283,16 @@ class _HomePageState extends State<HomePage> { // class to bind MarketStore into
                   child: Padding(
                     padding: const EdgeInsets.all(12),
                     child: MarketChart(
-                      real: market?.real ?? const [],
+                      real: _windowedReal(market?.real ?? const []),
                       predictions: market?.predictions ?? const [],
-                    ), // real solid + predictions dashed
+                    ), // windowed real + full predictions dashed
                   ),
                 ),
+                const SizedBox(height: 12),
+                _ChartTimeRangeBar(
+                  selected: _chartRange,
+                  onChanged: (range) => setState(() => _chartRange = range),
+                ), // 1W / 1M / 3M / YTD / Max under chart
                 const SizedBox(height: 24),
                 Wrap(
                   spacing: 12,
@@ -252,6 +326,94 @@ class _HomePageState extends State<HomePage> { // class to bind MarketStore into
         ); // home scaffold
       },
     );
+
+  }
+
+}
+
+
+/*########## CHART TIME RANGE BAR ##########*/
+
+class _ChartTimeRangeBar extends StatelessWidget { // class for MLP-style timeframe toggles under chart
+
+  const _ChartTimeRangeBar({
+    required this.selected,
+    required this.onChanged,
+  }); // construct range bar
+
+  final _ChartTimeRange selected; // active window
+  final ValueChanged<_ChartTimeRange> onChanged; // selection callback
+
+  /*########## BUILD ##########*/
+
+  @override
+  Widget build(BuildContext context) { // function to build centered 1W..Max row
+
+    return Row(
+      children: [
+        for (final range in _ChartTimeRange.values) ...[
+          if (range != _ChartTimeRange.values.first) const SizedBox(width: 6),
+          Expanded(
+            child: _ChartTimeRangeButton(
+              label: range.label,
+              selected: range == selected,
+              onTap: () => onChanged(range),
+            ),
+          ),
+        ],
+      ],
+    ); // equal-width timeframe row
+
+  }
+
+}
+
+
+/*########## CHART TIME RANGE BUTTON ##########*/
+
+class _ChartTimeRangeButton extends StatelessWidget { // class for one timeframe toggle
+
+  const _ChartTimeRangeButton({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  }); // construct button
+
+  final String label; // 1W / 1M / …
+  final bool selected; // active highlight
+  final VoidCallback onTap; // select range
+
+  /*########## BUILD ##########*/
+
+  @override
+  Widget build(BuildContext context) { // function to build inverted-active timeframe chip
+
+    final bg = selected ? Colors.white : AppColors.purple; // MLP active = inverted
+    final fg = selected ? AppColors.purple : Colors.white; // contrast text
+
+    return Material(
+      color: bg,
+      borderRadius: BorderRadius.circular(6),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(6),
+        child: Container(
+          alignment: Alignment.center,
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: AppColors.purple),
+          ),
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: fg,
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+        ),
+      ),
+    ); // purple / white toggle
 
   }
 
