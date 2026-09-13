@@ -143,10 +143,14 @@ def main(): # function to start logging, optional startup pipeline, then serve F
     if os.getenv("RUN_PIPELINE_ON_START", "false").lower() == "true": # opt-in startup refresh
         try:
             from helpers.pipeline import run_solana_update_pipeline # lazy import pipeline
-            logger.info("RUN_PIPELINE_ON_START=true — executing skeleton pipeline") # log start
+            logger.info("RUN_PIPELINE_ON_START=true — executing Solana update pipeline") # log start
             run_solana_update_pipeline() # run Solana update once
-        except NotImplementedError as e: # unfinished Tiger/yfinance/predictor steps
-            logger.warning("Startup pipeline skeleton stopped: %s", e) # soft fail
+        except TimeoutError as e: # predictor callback never arrived
+            logger.error("Startup pipeline timed out: %s", e) # soft/hard fail below
+            if os.getenv("EXIT_ON_PIPELINE_FAILURE", "false").lower() == "true": # hard fail opt-in
+                sys.exit(1) # abort process
+        except NotImplementedError as e: # unfinished steps
+            logger.warning("Startup pipeline stopped: %s", e) # soft fail
         except Exception as e: # unexpected pipeline error
             logger.error("Startup pipeline failed: %s", e, exc_info=True) # log stack
             if os.getenv("EXIT_ON_PIPELINE_FAILURE", "false").lower() == "true": # hard fail opt-in

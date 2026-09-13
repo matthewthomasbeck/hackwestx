@@ -153,23 +153,41 @@ def run_solana_update_pipeline(forecast_days=None, force=False): # function to o
 
     ##### 4) call predictor, wait, persist predictions #####
 
-    # Still stubbed: Auth0 M2M vs API key + payload normalize + wait_for_predictions
-    # prediction_json = prediction_client.run_predictions(ohlcv_data, num_predictions=min(forecast_days, 3))
-    # tiger_db.upsert_predictions(prediction_json["rows"])
-    # predictions = tiger_db.read_predictions()
-    predictions: Dict[str, Any] = {"asset": "SOL", "series": []} # empty until predictor wired
-    summary["predictions_run"] = False # predict step not live yet
-    summary["predictions_reason"] = "predictor_not_wired" # explicit gap
+    num_predictions = max(1, min(int(forecast_days), 3)) # predictor hard cap is 3
+    summary["num_predictions"] = num_predictions # record capped horizon
+    callback_payload = prediction_client.run_predictions(
+        ohlcv_data,
+        num_predictions=num_predictions,
+    ) # Auth0 M2M → predictor → /callback/solana
+    prediction_rows = prediction_client.callback_to_prediction_rows(
+        callback_payload,
+        num_predictions=num_predictions,
+    ) # future closes for Tiger
+    written_preds = tiger_db.upsert_predictions(prediction_rows) # persist forecasts
+    summary["prediction_rows_upserted"] = written_preds # tiger write count
+    predictions = prediction_client.callback_to_frontend_predictions(
+        callback_payload,
+        num_predictions=num_predictions,
+    ) # frontend-shaped forecasts
+    summary["predictions_run"] = True # predict step completed
+    summary["predictions_sample"] = predictions.get("series") # console-friendly proof
+
+    logger.info(
+        "SOL predictions ready (rows=%s sample=%s)",
+        written_preds,
+        predictions.get("series"),
+    ) # print usable proof to console/logs
 
     ##### 5–6) serve real + predictions #####
 
     final_payload = frontend_delivery.build_real_plus_predictions_payload(
         ohlcv_data,
         predictions,
-        forecast_days,
-    ) # ready payload (predictions may be empty)
+        num_predictions,
+    ) # ready payload
     frontend_delivery.send_to_frontend(final_payload) # cache/webhook final
 
-    logger.info("Solana update pipeline finished (yfinance + Tiger; predictor pending)") # log done
-    summary["reason"] = "ohlcv_updated" # real data path completed
+    logger.info("Solana update pipeline finished (yfinance + Tiger + predictor)") # log done
+    summary["reason"] = "ohlcv_and_predictions_updated" # full path completed
+    summary["forecast_days"] = num_predictions # echo effective horizon
     return summary # return for refresh API / logs

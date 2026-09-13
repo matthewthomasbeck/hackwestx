@@ -18,7 +18,10 @@ AUTH0_M2M_CLIENT_SECRET=
 AUTH0_PREDICTOR_AUDIENCE=https://predictor.soothsayer.hackwestx
 
 # === Predictor (Tailscale) ===
+# Desktop predictor base URL (Tailscale IP/hostname of the GPU box)
 PREDICTOR_BASE_URL=http://predictor-desktop:8000
+# EC2 base URL as seen FROM the predictor (Tailscale IP/hostname of this EC2 box)
+# Do NOT use localhost — that points at the GPU machine itself
 CALLBACK_BASE_URL=http://application-backend:8080
 PREDICTOR_MODE=live
 
@@ -26,7 +29,7 @@ PREDICTOR_MODE=live
 YFINANCE_SOL_TICKER=SOL-USD
 YFINANCE_INTERVAL=1d
 YFINANCE_PERIOD=2y
-FORECAST_DAYS=7
+FORECAST_DAYS=3
 
 # === Solana chain / paper trade (later) ===
 SOLANA_NETWORK=devnet

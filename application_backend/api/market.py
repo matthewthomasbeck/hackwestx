@@ -22,7 +22,6 @@
 from __future__ import annotations # enable postponed evaluation of type hints
 
 import logging # import logging for route diagnostics
-from typing import Any, Dict # import typing helpers for callback payload store
 
 ##### import third-party libraries #####
 
@@ -31,7 +30,10 @@ from flask import Blueprint, g, jsonify, request # import Flask request/response
 ##### import local modules #####
 
 from helpers.auth0 import require_auth # import Auth0 bearer-token decorator for Flutter users
+from helpers import callback_store # import predictor callback result store
 from helpers import frontend_delivery # import frontend payload cache helpers
+from helpers import prediction_client # import callback→Tiger row helpers
+from helpers import tiger_db # import Tiger read helpers for market fallback
 from helpers.pipeline import run_solana_update_pipeline # import Solana update orchestration
 
 
@@ -43,35 +45,10 @@ from helpers.pipeline import run_solana_update_pipeline # import Solana update o
 ##################################################
 
 
-########## CREATE BLUEPRINT / LOGGER / STORE ##########
+########## CREATE BLUEPRINT / LOGGER ##########
 
 api_bp = Blueprint("api", __name__) # create blueprint for Auth0-protected market API
 logger = logging.getLogger(__name__) # create module logger
-
-_pending_prediction_result: Dict[str, Any] | None = None # store last predictor callback payload
-
-
-
-
-
-##################################################
-############### CALLBACK RESULT STORE ############
-##################################################
-
-
-########## GET PENDING PREDICTION RESULT ##########
-
-def get_pending_prediction_result(): # function to return last predictor callback payload if present
-
-    return _pending_prediction_result # last callback JSON or None
-
-
-########## SET PENDING PREDICTION RESULT ##########
-
-def set_pending_prediction_result(payload): # function to save predictor callback JSON for waiters/pipeline
-
-    global _pending_prediction_result # mutate module store
-    _pending_prediction_result = payload # save callback JSON
 
 
 
@@ -104,15 +81,24 @@ def get_market(): # function to serve cached SOL real (+ predictions) JSON to Fl
     if cached is not None: # cache hit
         return jsonify(cached), 200 # serve cached market JSON
 
-    # TODO: fall back to tiger_db.read_market_bundle()
-    logger.info("No cached payload — Tiger fallback not implemented yet") # log miss
-    return jsonify({
-        "asset": "SOL",
-        "status": "empty",
-        "real": None,
-        "predictions": None,
-        "message": "No market snapshot cached yet; trigger /api/v1/market/refresh",
-    }), 200 # empty snapshot until refresh
+    try:
+        bundle = tiger_db.read_market_bundle() # fall back to Tiger
+        payload = frontend_delivery.build_real_plus_predictions_payload(
+            bundle["real"],
+            bundle["predictions"],
+            bundle.get("forecast_days") or 3,
+        ) # compose ready payload
+        frontend_delivery.send_to_frontend(payload) # warm cache
+        return jsonify(payload), 200 # serve Tiger snapshot
+    except Exception as e: # Tiger miss / not configured
+        logger.info("No cached payload and Tiger fallback failed: %s", e) # log miss
+        return jsonify({
+            "asset": "SOL",
+            "status": "empty",
+            "real": None,
+            "predictions": None,
+            "message": "No market snapshot cached yet; trigger /api/v1/market/refresh",
+        }), 200 # empty snapshot until refresh
 
 
 ########## REFRESH MARKET ##########
@@ -131,8 +117,11 @@ def refresh_market(): # function to trigger yfinance → Tiger → predictor →
             force=force,
         ) # run orchestration
         return jsonify({"status": "ok", "summary": summary}), 200 # success summary
-    except NotImplementedError as e: # unfinished Tiger/yfinance/predictor step
-        logger.warning("Pipeline skeleton hit unimplemented step: %s", e) # soft fail
+    except TimeoutError as e: # predictor callback never arrived
+        logger.error("Market refresh timed out waiting for predictor: %s", e) # log
+        return jsonify({"status": "error", "message": str(e)}), 504 # gateway timeout
+    except NotImplementedError as e: # unfinished step
+        logger.warning("Pipeline hit unimplemented step: %s", e) # soft fail
         return jsonify({
             "status": "skeleton",
             "message": str(e),
@@ -152,20 +141,23 @@ def solana_prediction_callback(): # function to receive completed predictions fr
         return jsonify({"status": "error", "message": "No JSON body"}), 400 # bad request
 
     logger.info("Received solana predictions callback (keys=%s)", list(payload.keys())) # log keys
-    set_pending_prediction_result(payload) # store for waiters
+    callback_store.set_pending_prediction_result(payload) # unblock wait_for_predictions
 
-    # TODO:
-    #   1) normalize prediction rows
-    #   2) tiger_db.upsert_predictions(...)
-    #   3) build real+predictions payload and frontend_delivery.send_to_frontend(...)
+    # Best-effort persist even if the waiter path also upserts (idempotent ON CONFLICT)
     try:
-        # tiger_db.upsert_predictions(...)  # noqa: skeleton
-        pass # persist not wired yet
+        num_predictions = int(payload.get("numPredictions") or 3) # horizon from callback
+        rows = prediction_client.callback_to_prediction_rows(
+            payload,
+            num_predictions=num_predictions,
+        ) # Tiger rows
+        if rows: # have forecasts
+            written = tiger_db.upsert_predictions(rows) # persist
+            logger.info("Callback persisted %s prediction rows to Tiger", written) # log
     except Exception as e: # persist failure path
         logger.error("Failed to persist callback predictions: %s", e, exc_info=True) # log
         return jsonify({
             "status": "received_but_persist_failed",
             "error": str(e),
-        }), 200 # still ack receipt
+        }), 200 # still ack receipt so waiter unblocks
 
     return jsonify({"status": "received", "asset": "SOL"}), 200 # callback ack
