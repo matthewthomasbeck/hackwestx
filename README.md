@@ -52,5 +52,7 @@ THINGS DONE:
 8. completed predictor backend env
 9. completed application backend env
 10. completed prediction pipeline on desktop
+11. completed base implementation of application backend
+12. successfully started both backend systems (but yet to pressure test)
 
 
