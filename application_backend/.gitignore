@@ -1,0 +1,10 @@
+.env
+.env*
+*.xml
+*.iml
+__pycache__/
+*.pyc
+.venv/
+venv/
+logs/*.log
+.DS_Store

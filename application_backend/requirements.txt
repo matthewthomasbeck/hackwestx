@@ -1,0 +1,22 @@
+# Solana Soothsayer — application_backend
+
+# Web
+flask>=2.3.0
+flask-cors>=4.0.0
+gunicorn>=21.2.0
+
+# HTTP / env
+requests>=2.31.0
+python-dotenv>=1.0.0
+urllib3>=1.26.0
+
+# Data
+yfinance>=0.2.40
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Tiger Cloud (Postgres / Timescale)
+psycopg[binary]>=3.1.0
+
+# Auth0 JWT validation (wire in helpers/auth0.py)
+PyJWT[crypto]>=2.8.0

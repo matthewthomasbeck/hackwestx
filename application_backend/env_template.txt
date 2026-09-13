@@ -1,0 +1,55 @@
+# === Tiger Data / Timescale ===
+TIGER_HOST=
+TIGER_PORT=
+TIGER_DB=tsdb
+TIGER_USER=tsdbadmin
+TIGER_PASSWORD=
+TIGER_SSLMODE=require
+DATABASE_URL=
+
+# === Auth0 user JWT validation (Flutter → EC2) ===
+AUTH0_DOMAIN=
+AUTH0_AUDIENCE=https://api.soothsayer.hackwestx
+AUTH0_ISSUER=
+
+# === Auth0 M2M → predictor_backend ===
+AUTH0_M2M_CLIENT_ID=
+AUTH0_M2M_CLIENT_SECRET=
+AUTH0_PREDICTOR_AUDIENCE=https://predictor.soothsayer.hackwestx
+
+# === Predictor (Tailscale) ===
+PREDICTOR_BASE_URL=http://predictor-desktop:8000
+CALLBACK_BASE_URL=http://application-backend:8080
+PREDICTOR_MODE=live
+
+# === yfinance / Solana market series ===
+YFINANCE_SOL_TICKER=SOL-USD
+YFINANCE_INTERVAL=1d
+YFINANCE_PERIOD=2y
+FORECAST_DAYS=7
+
+# === Solana chain / paper trade (later) ===
+SOLANA_NETWORK=devnet
+SOLANA_RPC_URL=
+SOLANA_MAINNET_RPC_URL=
+HELIUS_API_KEY=
+SOLANA_PAPER_PUBKEY=
+SOLANA_PAPER_KEYPAIR_PATH=
+PAPER_TRADE_MODE=ledger
+PAPER_STARTING_USD=10000
+PAPER_STARTING_SOL=0
+SOL_MINT=So11111111111111111111111111111111111111112
+
+# === Frontend delivery ===
+# Leave empty to serve via GET /api/v1/market only
+FRONTEND_WEBHOOK_URL=
+
+# === App ===
+HOST=0.0.0.0
+PORT=8080
+LOG_LEVEL=INFO
+LOG_FILE=logs/application_backend.log
+CORS_ORIGINS=*
+FLASK_DEBUG=false
+RUN_PIPELINE_ON_START=false
+EXIT_ON_PIPELINE_FAILURE=false
