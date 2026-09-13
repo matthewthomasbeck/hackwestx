@@ -63,14 +63,15 @@ _pending_prediction_result: Dict[str, Any] | None = None # store last predictor 
 
 def get_pending_prediction_result(): # function to return last predictor callback payload if present
 
-    pass # skeleton: return _pending_prediction_result
+    return _pending_prediction_result # last callback JSON or None
 
 
 ########## SET PENDING PREDICTION RESULT ##########
 
 def set_pending_prediction_result(payload): # function to save predictor callback JSON for waiters/pipeline
 
-    pass # skeleton: assign global _pending_prediction_result
+    global _pending_prediction_result # mutate module store
+    _pending_prediction_result = payload # save callback JSON
 
 
 
@@ -87,7 +88,10 @@ def set_pending_prediction_result(payload): # function to save predictor callbac
 @require_auth # require Flutter user Auth0 access token
 def me(): # function to return Auth0 sub/claims for the logged-in user
 
-    pass # skeleton: jsonify g.user_sub and g.user_claims
+    return jsonify({
+        "sub": getattr(g, "user_sub", None),
+        "claims": getattr(g, "user_claims", {}),
+    }), 200 # Auth0 identity for Flutter
 
 
 ########## GET MARKET ##########
@@ -96,7 +100,19 @@ def me(): # function to return Auth0 sub/claims for the logged-in user
 @require_auth # require Flutter user Auth0 access token
 def get_market(): # function to serve cached SOL real (+ predictions) JSON to Flutter
 
-    pass # skeleton: return frontend cache or empty market snapshot
+    cached = frontend_delivery.get_cached_frontend_payload() # in-memory snapshot
+    if cached is not None: # cache hit
+        return jsonify(cached), 200 # serve cached market JSON
+
+    # TODO: fall back to tiger_db.read_market_bundle()
+    logger.info("No cached payload — Tiger fallback not implemented yet") # log miss
+    return jsonify({
+        "asset": "SOL",
+        "status": "empty",
+        "real": None,
+        "predictions": None,
+        "message": "No market snapshot cached yet; trigger /api/v1/market/refresh",
+    }), 200 # empty snapshot until refresh
 
 
 ########## REFRESH MARKET ##########
@@ -105,7 +121,25 @@ def get_market(): # function to serve cached SOL real (+ predictions) JSON to Fl
 @require_auth # require Flutter user Auth0 access token
 def refresh_market(): # function to trigger yfinance → Tiger → predictor → frontend pipeline
 
-    pass # skeleton: parse force/forecast_days and call run_solana_update_pipeline
+    body = request.get_json(silent=True) or {} # optional JSON body
+    force = bool(body.get("force", False)) # force update flag
+    forecast_days = body.get("forecast_days") # optional horizon override
+
+    try:
+        summary = run_solana_update_pipeline(
+            forecast_days=forecast_days,
+            force=force,
+        ) # run orchestration
+        return jsonify({"status": "ok", "summary": summary}), 200 # success summary
+    except NotImplementedError as e: # unfinished Tiger/yfinance/predictor step
+        logger.warning("Pipeline skeleton hit unimplemented step: %s", e) # soft fail
+        return jsonify({
+            "status": "skeleton",
+            "message": str(e),
+        }), 501 # not implemented
+    except Exception as e: # unexpected failure
+        logger.error("Market refresh failed: %s", e, exc_info=True) # log stack
+        return jsonify({"status": "error", "message": str(e)}), 500 # server error
 
 
 ########## SOLANA PREDICTION CALLBACK ##########
@@ -113,4 +147,25 @@ def refresh_market(): # function to trigger yfinance → Tiger → predictor →
 @api_bp.route("/callback/solana", methods=["POST"]) # register POST /api/v1/callback/solana
 def solana_prediction_callback(): # function to receive completed predictions from predictor_backend
 
-    pass # skeleton: store callback JSON, upsert Tiger predictions, refresh frontend payload
+    payload = request.get_json(silent=True) # parse callback body
+    if not payload: # require JSON
+        return jsonify({"status": "error", "message": "No JSON body"}), 400 # bad request
+
+    logger.info("Received solana predictions callback (keys=%s)", list(payload.keys())) # log keys
+    set_pending_prediction_result(payload) # store for waiters
+
+    # TODO:
+    #   1) normalize prediction rows
+    #   2) tiger_db.upsert_predictions(...)
+    #   3) build real+predictions payload and frontend_delivery.send_to_frontend(...)
+    try:
+        # tiger_db.upsert_predictions(...)  # noqa: skeleton
+        pass # persist not wired yet
+    except Exception as e: # persist failure path
+        logger.error("Failed to persist callback predictions: %s", e, exc_info=True) # log
+        return jsonify({
+            "status": "received_but_persist_failed",
+            "error": str(e),
+        }), 200 # still ack receipt
+
+    return jsonify({"status": "received", "asset": "SOL"}), 200 # callback ack

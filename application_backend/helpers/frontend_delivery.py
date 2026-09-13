@@ -63,14 +63,15 @@ _latest_payload: Optional[Dict[str, Any]] = None # in-memory market JSON served 
 
 def get_cached_frontend_payload(): # function to return last market JSON prepared for Flutter, if any
 
-    pass # skeleton: return _latest_payload
+    return _latest_payload # return last cached market JSON or None
 
 
 ########## SET CACHED FRONTEND PAYLOAD ##########
 
 def set_cached_frontend_payload(payload): # function to replace in-memory market JSON snapshot for API clients
 
-    pass # skeleton: assign global _latest_payload
+    global _latest_payload # mutate module cache
+    _latest_payload = payload # replace snapshot
 
 
 
@@ -85,7 +86,13 @@ def set_cached_frontend_payload(payload): # function to replace in-memory market
 
 def build_real_only_payload(ohlcv_data): # function to build frontend JSON while predictions are still running
 
-    pass # skeleton: {asset, status=predictions_pending, real, predictions=None}
+    return {
+        "asset": "SOL",
+        "status": "predictions_pending",
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "real": ohlcv_data,
+        "predictions": None,
+    } # real prices only; predictions still running
 
 
 ########## BUILD REAL PLUS PREDICTIONS PAYLOAD ##########
@@ -96,7 +103,14 @@ def build_real_plus_predictions_payload( # function to build frontend JSON once 
         forecast_days
 ):
 
-    pass # skeleton: {asset, status=ready, forecast_days, real, predictions}
+    return {
+        "asset": "SOL",
+        "status": "ready",
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "forecast_days": forecast_days,
+        "real": ohlcv_data,
+        "predictions": predictions,
+    } # real prices + forecasts ready
 
 
 
@@ -111,4 +125,23 @@ def build_real_plus_predictions_payload( # function to build frontend JSON once 
 
 def send_to_frontend(payload): # function to cache market JSON for /market and optionally POST a webhook
 
-    pass # skeleton: set_cached_frontend_payload(); optional FRONTEND_WEBHOOK_URL POST
+    set_cached_frontend_payload(payload) # always cache for GET /market
+    logger.info(
+        "Frontend payload cached (status=%s keys=%s)",
+        payload.get("status"),
+        list(payload.keys()),
+    ) # log cache update
+
+    webhook = os.getenv("FRONTEND_WEBHOOK_URL") # optional push URL
+    if not webhook: # no webhook configured
+        return # cache-only delivery
+
+    logger.info("POSTing market payload to FRONTEND_WEBHOOK_URL") # log push attempt
+    response = requests.post(webhook, json=payload, timeout=15) # POST market JSON
+    if response.status_code >= 400: # webhook rejected payload
+        logger.error(
+            "Frontend webhook failed (%s): %s",
+            response.status_code,
+            response.text,
+        ) # log failure body
+        response.raise_for_status() # surface HTTP error

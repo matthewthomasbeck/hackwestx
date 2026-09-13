@@ -48,7 +48,10 @@ health_bp = Blueprint("health", __name__) # create blueprint for health/root rou
 @health_bp.route("/health", methods=["GET"]) # register GET /health
 def health(): # function to return service health JSON for uptime checks
 
-    pass # skeleton: return {"status": "healthy", "service": "application_backend"}
+    return jsonify({
+        "status": "healthy",
+        "service": "application_backend",
+    }), 200 # liveness probe response
 
 
 ########## ROOT ##########
@@ -56,4 +59,13 @@ def health(): # function to return service health JSON for uptime checks
 @health_bp.route("/", methods=["GET"]) # register GET /
 def root(): # function to list available application_backend endpoints
 
-    pass # skeleton: return service name + endpoint map
+    return jsonify({
+        "service": "application_backend",
+        "endpoints": {
+            "health": "/health",
+            "market": "/api/v1/market",
+            "refresh": "/api/v1/market/refresh",
+            "callback": "/callback/solana",
+            "me": "/api/v1/me",
+        },
+    }), 200 # service name + endpoint map
