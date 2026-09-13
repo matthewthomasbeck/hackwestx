@@ -324,6 +324,12 @@ class _HomePageState extends State<HomePage> { // class to bind MarketStore into
                     ),
                     const SizedBox(height: 22),
                     _QuickAction(
+                      label: 'Sell SOL',
+                      icon: Icons.sell_outlined,
+                      onTap: () => Navigator.of(context).pushNamed(AppRoutes.sellSol),
+                    ),
+                    const SizedBox(height: 22),
+                    _QuickAction(
                       label: 'History',
                       icon: Icons.history,
                       onTap: () => Navigator.of(context).pushNamed(AppRoutes.tradeHistory),

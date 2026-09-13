@@ -55,7 +55,7 @@ class TradeHistoryPage extends StatelessWidget { // class for scrollable past pa
           body: trades.isEmpty
               ? Center(
                   child: Text(
-                    'No paper trades yet.\nBuy SOL from the home screen to populate this list.',
+                    'No paper trades yet.\nBuy or sell SOL from the home screen to populate this list.',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                           color: Theme.of(context).colorScheme.onSurfaceVariant,

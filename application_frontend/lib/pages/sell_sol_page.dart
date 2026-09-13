@@ -32,27 +32,27 @@ import '../theme/app_theme.dart'; // import direction colors
 
 
 /*##################################################*/
-/*############### BUY SOL PAGE #####################*/
+/*############### SELL SOL PAGE ####################*/
 /*##################################################*/
 
 
-/*########## BUY SOL PAGE ##########*/
+/*########## SELL SOL PAGE ##########*/
 
-class BuySolPage extends StatefulWidget { // class for amount input + estimated SOL preview
+class SellSolPage extends StatefulWidget { // class for SOL amount input + estimated USD preview
 
-  const BuySolPage({super.key}); // default const constructor
+  const SellSolPage({super.key}); // default const constructor
 
   @override
-  State<BuySolPage> createState() => _BuySolPageState(); // create state
+  State<SellSolPage> createState() => _SellSolPageState(); // create state
 
 }
 
 
-/*########## BUY SOL PAGE STATE ##########*/
+/*########## SELL SOL PAGE STATE ##########*/
 
-class _BuySolPageState extends State<BuySolPage> { // class to track spend amount text field
+class _SellSolPageState extends State<SellSolPage> { // class to track SOL amount text field
 
-  final _amountController = TextEditingController(); // USD amount input
+  final _amountController = TextEditingController(); // SOL amount input
 
   /*########## DISPOSE ##########*/
 
@@ -64,49 +64,61 @@ class _BuySolPageState extends State<BuySolPage> { // class to track spend amoun
 
   }
 
-  /*########## ESTIMATED SOL ##########*/
+  /*########## ESTIMATED USD ##########*/
 
-  double? _estimatedSol(double solPrice) { // function to preview SOL received at live price
+  double? _estimatedUsd(double solPrice) { // function to preview USD proceeds at live price
 
-    final usd = double.tryParse(_amountController.text); // parse field
-    if (usd == null || usd <= 0 || solPrice <= 0) { // invalid / unknown price
+    final sol = double.tryParse(_amountController.text); // parse field
+    if (sol == null || sol <= 0 || solPrice <= 0) { // invalid / unknown price
       return null; // no preview
     }
-    return usd / solPrice; // estimated fill size
+    return sol * solPrice; // estimated proceeds
+
+  }
+
+  /*########## SELL MAX ##########*/
+
+  void _sellMax(double solHeld) { // function to fill field with full holdings
+
+    if (solHeld <= 0) { // nothing to sell
+      return; // stay
+    }
+    _amountController.text = solHeld.toStringAsFixed(6); // full position
+    setState(() {}); // refresh preview
 
   }
 
   /*########## REVIEW ##########*/
 
-  void _reviewBuy(double solPrice, double cashUsd) { // function to validate then open confirm
+  void _reviewSell(double solPrice, double solHeld) { // function to validate then open confirm
 
-    final usd = double.tryParse(_amountController.text.trim()); // parse spend
-    if (usd == null || usd <= 0) { // bad amount
+    final sol = double.tryParse(_amountController.text.trim()); // parse size
+    if (sol == null || sol <= 0) { // bad amount
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter a USD amount greater than 0')),
+        const SnackBar(content: Text('Enter a SOL amount greater than 0')),
       ); // hint
       return; // stay
     }
-    if (usd > cashUsd) { // overspend
+    if (sol > solHeld) { // oversell
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Only \$${cashUsd.toStringAsFixed(2)} available')),
+        SnackBar(content: Text('Only ${solHeld.toStringAsFixed(4)} SOL available')),
       ); // hint
       return; // stay
     }
     if (solPrice <= 0) { // no spot
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Load market data before buying')),
+        const SnackBar(content: Text('Load market data before selling')),
       ); // hint
       return; // stay
     }
 
-    final solAmount = usd / solPrice; // preview fill
+    final usdAmount = sol * solPrice; // preview proceeds
     Navigator.of(context).pushNamed(
       AppRoutes.tradeConfirm,
       arguments: PaperOrderArgs(
-        side: 'buy',
-        usdAmount: usd,
-        solAmount: solAmount,
+        side: 'sell',
+        usdAmount: usdAmount,
+        solAmount: sol,
         price: solPrice,
       ),
     ); // hand off to confirm
@@ -116,35 +128,36 @@ class _BuySolPageState extends State<BuySolPage> { // class to track spend amoun
   /*########## BUILD ##########*/
 
   @override
-  Widget build(BuildContext context) { // function to build buy SOL form
+  Widget build(BuildContext context) { // function to build sell SOL form
 
     return ListenableBuilder(
-      listenable: Listenable.merge([marketStore, portfolioStore]), // price + cash
+      listenable: Listenable.merge([marketStore, portfolioStore]), // price + holdings
       builder: (context, _) {
         final solPrice = marketStore.lastClose ?? 0; // latest close
-        final cashUsd = portfolioStore.cashUsd; // live paper cash
-        final estimated = _estimatedSol(solPrice); // live preview
+        final solHeld = portfolioStore.solHeld; // live SOL
+        final estimated = _estimatedUsd(solPrice); // live preview
         final preds = marketStore.market?.predictions ?? const []; // forecasts
-        final bullish = preds.isNotEmpty &&
+        final bearish = preds.isNotEmpty &&
             solPrice > 0 &&
-            preds.first.predictedClose > solPrice; // Day-1 above spot
-        final usd = double.tryParse(_amountController.text); // for CTA enable
+            preds.first.predictedClose < solPrice; // Day-1 below spot
+        final sol = double.tryParse(_amountController.text); // for CTA enable
         final canReview = solPrice > 0 &&
-            usd != null &&
-            usd > 0 &&
-            usd <= cashUsd; // valid paper buy
+            solHeld > 0 &&
+            sol != null &&
+            sol > 0 &&
+            sol <= solHeld; // valid paper sell
 
         return Scaffold(
-          appBar: AppBar(title: const Text('Buy SOL')),
+          appBar: AppBar(title: const Text('Sell SOL')),
           body: Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  'Available: \$${cashUsd.toStringAsFixed(2)}',
+                  'Holdings: ${solHeld.toStringAsFixed(4)} SOL',
                   style: Theme.of(context).textTheme.titleMedium,
-                ), // paper USD balance
+                ), // paper SOL balance
                 const SizedBox(height: 8),
                 Text(
                   solPrice > 0
@@ -158,27 +171,31 @@ class _BuySolPageState extends State<BuySolPage> { // class to track spend amoun
                 TextField(
                   controller: _amountController,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  decoration: const InputDecoration(
-                    labelText: 'Amount to spend (USD)',
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    labelText: 'Amount to sell (SOL)',
+                    border: const OutlineInputBorder(),
+                    suffixIcon: TextButton(
+                      onPressed: solHeld > 0 ? () => _sellMax(solHeld) : null,
+                      child: const Text('Max'),
+                    ),
                   ),
                   onChanged: (_) => setState(() {}), // refresh preview
-                ), // spend amount
+                ), // sell size
                 const SizedBox(height: 16),
                 Text(
                   estimated == null
-                      ? 'Estimated SOL: —'
-                      : 'Estimated SOL: ${estimated.toStringAsFixed(4)}',
+                      ? 'Estimated USD: —'
+                      : 'Estimated USD: \$${estimated.toStringAsFixed(2)}',
                   style: Theme.of(context).textTheme.bodyLarge,
-                ), // live SOL preview
+                ), // live USD preview
                 const SizedBox(height: 8),
                 Text(
-                  bullish
-                      ? 'Based on latest forecast — model is bullish on Day 1.'
-                      : 'Based on latest forecast when model is bullish.',
+                  bearish
+                      ? 'Based on latest forecast — model is bearish on Day 1.'
+                      : 'Based on latest forecast when model is bearish.',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: bullish
-                            ? AppColors.green
+                        color: bearish
+                            ? AppColors.red
                             : Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                 ), // forecast-aware hint
@@ -198,7 +215,7 @@ class _BuySolPageState extends State<BuySolPage> { // class to track spend amoun
                         color: Colors.transparent,
                         child: InkWell(
                           onTap: canReview
-                              ? () => _reviewBuy(solPrice, cashUsd)
+                              ? () => _reviewSell(solPrice, solHeld)
                               : null,
                           borderRadius: BorderRadius.circular(999),
                           child: Ink(
@@ -214,7 +231,7 @@ class _BuySolPageState extends State<BuySolPage> { // class to track spend amoun
                             child: Padding(
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               child: Text(
-                                'Review Buy',
+                                'Review Sell',
                                 textAlign: TextAlign.center,
                                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
                                       color: onGradient,
@@ -231,7 +248,7 @@ class _BuySolPageState extends State<BuySolPage> { // class to track spend amoun
               ],
             ),
           ),
-        ); // buy scaffold
+        ); // sell scaffold
       },
     );
 

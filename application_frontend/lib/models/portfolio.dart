@@ -73,18 +73,23 @@ class PaperTrade { // class to hold one paper buy/sell row for history / receipt
 }
 
 
-/*########## BUY ORDER ARGS ##########*/
+/*########## PAPER ORDER ARGS ##########*/
 
-class BuyOrderArgs { // class to pass review-order fields Buy SOL → Confirm
+class PaperOrderArgs { // class to pass review-order fields Buy/Sell → Confirm
 
-  const BuyOrderArgs({
+  const PaperOrderArgs({
+    required this.side,
     required this.usdAmount,
     required this.solAmount,
     required this.price,
-  }); // construct pending paper buy
+  }); // construct pending paper order
 
-  final double usdAmount; // USD to spend
-  final double solAmount; // estimated SOL at review time
+  final String side; // buy | sell
+  final double usdAmount; // USD notional
+  final double solAmount; // SOL size
   final double price; // spot used for estimate / fill
+
+  bool get isBuy => side == 'buy'; // buy flow
+  bool get isSell => side == 'sell'; // sell flow
 
 }

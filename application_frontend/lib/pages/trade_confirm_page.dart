@@ -22,7 +22,7 @@ import 'package:flutter/material.dart'; // import Flutter Material UI toolkit
 
 /*##### import local modules #####*/
 
-import '../models/portfolio.dart'; // import BuyOrderArgs / PaperTrade
+import '../models/portfolio.dart'; // import PaperOrderArgs / PaperTrade
 import '../routes.dart'; // import named route constants
 import '../services/app_services.dart'; // import portfolioStore for paper fill
 import '../theme/app_theme.dart'; // import success green glow tokens
@@ -54,24 +54,24 @@ class _TradeConfirmPageState extends State<TradeConfirmPage> { // class to toggl
 
   bool _confirmed = false; // False = review, True = receipt
   bool _submitting = false; // guard double-tap
-  PaperTrade? _filled; // receipt after successful buy
+  PaperTrade? _filled; // receipt after successful fill
   String? _error; // fill failure message
 
   /*########## ORDER ARGS ##########*/
 
-  BuyOrderArgs? get _order { // function to read Buy SOL handoff args
+  PaperOrderArgs? get _order { // function to read Buy/Sell handoff args
 
     final args = ModalRoute.of(context)?.settings.arguments; // route args
-    if (args is BuyOrderArgs) { // expected type
+    if (args is PaperOrderArgs) { // expected type
       return args; // pending order
     }
-    return null; // opened without buy flow
+    return null; // opened without trade flow
 
   }
 
   /*########## CONFIRM ##########*/
 
-  Future<void> _confirm() async { // function to fill paper buy then show receipt
+  Future<void> _confirm() async { // function to fill paper buy/sell then show receipt
 
     final order = _order; // pending review
     if (order == null || _submitting) { // nothing to fill / in flight
@@ -84,10 +84,18 @@ class _TradeConfirmPageState extends State<TradeConfirmPage> { // class to toggl
     });
 
     try {
-      final trade = portfolioStore.buy(
-        usdAmount: order.usdAmount,
-        price: order.price,
-      ); // debit cash / credit SOL
+      final PaperTrade trade;
+      if (order.isSell) { // exit position
+        trade = portfolioStore.sell(
+          solAmount: order.solAmount,
+          price: order.price,
+        ); // credit cash / debit SOL
+      } else { // enter / add
+        trade = portfolioStore.buy(
+          usdAmount: order.usdAmount,
+          price: order.price,
+        ); // debit cash / credit SOL
+      }
       if (!mounted) { // disposed during await
         return; // bail
       }
@@ -115,6 +123,7 @@ class _TradeConfirmPageState extends State<TradeConfirmPage> { // class to toggl
 
     final order = _order; // pending or null
     final filled = _filled; // post-fill trade
+    final isSell = filled?.side == 'sell' || order?.isSell == true; // label mode
 
     if (_confirmed && filled != null) { // success receipt
       return Scaffold(
@@ -134,7 +143,7 @@ class _TradeConfirmPageState extends State<TradeConfirmPage> { // class to toggl
               ), // success check + glow
               const SizedBox(height: 16),
               Text(
-                'Paper buy submitted',
+                isSell ? 'Paper sell submitted' : 'Paper buy submitted',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
@@ -146,11 +155,11 @@ class _TradeConfirmPageState extends State<TradeConfirmPage> { // class to toggl
               ),
               const SizedBox(height: 24),
               _SummaryRow(
-                label: 'USD spent',
+                label: isSell ? 'USD received' : 'USD spent',
                 value: '\$${filled.usdAmount.toStringAsFixed(2)}',
               ),
               _SummaryRow(
-                label: 'SOL bought',
+                label: isSell ? 'SOL sold' : 'SOL bought',
                 value: filled.solAmount.toStringAsFixed(4),
               ),
               _SummaryRow(
@@ -247,7 +256,7 @@ class _TradeConfirmPageState extends State<TradeConfirmPage> { // class to toggl
 
     if (order == null) { // deep-link / missing args
       return Scaffold(
-        appBar: AppBar(title: const Text('Confirm Buy')),
+        appBar: AppBar(title: const Text('Confirm Trade')),
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
@@ -255,7 +264,7 @@ class _TradeConfirmPageState extends State<TradeConfirmPage> { // class to toggl
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  'No pending order. Start from Buy SOL.',
+                  'No pending order. Start from Buy or Sell SOL.',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyLarge,
                 ),
@@ -274,7 +283,7 @@ class _TradeConfirmPageState extends State<TradeConfirmPage> { // class to toggl
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Confirm Buy')),
+      appBar: AppBar(title: Text(isSell ? 'Confirm Sell' : 'Confirm Buy')),
       body: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -283,11 +292,11 @@ class _TradeConfirmPageState extends State<TradeConfirmPage> { // class to toggl
             Text('Order summary', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 16),
             _SummaryRow(
-              label: 'USD spent',
+              label: isSell ? 'USD received' : 'USD spent',
               value: '\$${order.usdAmount.toStringAsFixed(2)}',
             ),
             _SummaryRow(
-              label: 'SOL bought',
+              label: isSell ? 'SOL sold' : 'SOL bought',
               value: order.solAmount.toStringAsFixed(4),
             ),
             _SummaryRow(

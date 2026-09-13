@@ -93,6 +93,40 @@ class PortfolioStore extends ChangeNotifier { // class to hold in-app paper cash
 
   }
 
+  /*########## SELL ##########*/
+
+  PaperTrade sell({required double solAmount, required double price}) { // function to fill a paper sell at spot
+
+    if (solAmount <= 0 || price <= 0) { // invalid order
+      throw ArgumentError('Sell requires positive SOL amount and price'); // hard fail
+    }
+    if (solAmount > solHeld + 1e-9) { // oversell
+      throw StateError('Insufficient SOL holdings'); // hard fail
+    }
+
+    final usdAmount = solAmount * price; // proceeds
+    cashUsd += usdAmount; // credit cash
+    solHeld -= solAmount; // debit SOL
+    if (solHeld <= 1e-9) { // flat after sell
+      solHeld = 0; // snap to zero
+      avgBuyPrice = 0; // clear basis
+    }
+    // partial sell keeps avgBuyPrice unchanged (remaining cost basis)
+
+    final trade = PaperTrade(
+      id: 'paper-${DateTime.now().millisecondsSinceEpoch}',
+      side: 'sell',
+      usdAmount: usdAmount,
+      solAmount: solAmount,
+      price: price,
+      timestamp: DateTime.now(),
+    ); // receipt row
+    trades.insert(0, trade); // newest first
+    notifyListeners(); // rebuild sell / portfolio / history
+    return trade; // for confirm receipt
+
+  }
+
   /*########## VALUE HISTORY ##########*/
 
   List<double> valueHistory(double solPrice) { // function to build equity curve for portfolio sparkline

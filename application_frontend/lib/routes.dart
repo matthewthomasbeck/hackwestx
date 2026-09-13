@@ -29,6 +29,7 @@ import 'pages/loading_page.dart'; // import splash / loading screen
 import 'pages/login_page.dart'; // import Auth0 login screen
 import 'pages/onboarding_page.dart'; // import first-run onboarding screen
 import 'pages/portfolio_page.dart'; // import paper portfolio screen
+import 'pages/sell_sol_page.dart'; // import paper sell SOL screen
 import 'pages/settings_page.dart'; // import account settings screen
 import 'pages/status_pages.dart'; // import empty / pending / error screens
 import 'pages/trade_confirm_page.dart'; // import trade confirm / receipt screen
@@ -52,6 +53,7 @@ class AppRoutes { // class to hold named route strings and MaterialApp route map
   static const onboarding = '/onboarding'; // first-run onboarding route
   static const home = '/home'; // main chart home route
   static const buySol = '/buy-sol'; // paper buy SOL route
+  static const sellSol = '/sell-sol'; // paper sell SOL route
   static const forecastDetail = '/forecast'; // forecast detail route
   static const portfolio = '/portfolio'; // paper portfolio route
   static const tradeConfirm = '/trade-confirm'; // trade confirm / receipt route
@@ -71,6 +73,7 @@ class AppRoutes { // class to hold named route strings and MaterialApp route map
       onboarding: (_) => const OnboardingPage(), // swipeable intro cards
       home: (_) => const HomePage(), // SOL chart + quick actions
       buySol: (_) => const BuySolPage(), // amount + review buy
+      sellSol: (_) => const SellSolPage(), // amount + review sell
       forecastDetail: (_) => const ForecastDetailPage(), // next 5 predicted closes
       portfolio: (_) => const PortfolioPage(), // cash / holdings / P&L
       tradeConfirm: (_) => const TradeConfirmPage(), // confirm then receipt
