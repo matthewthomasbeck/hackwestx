@@ -162,17 +162,82 @@ class _TradeConfirmPageState extends State<TradeConfirmPage> { // class to toggl
                 value: _formatTime(filled.timestamp),
               ),
               const Spacer(),
-              FilledButton(
-                onPressed: () => Navigator.of(context).pushNamed(AppRoutes.tradeHistory),
-                child: const Text('View History'),
-              ),
-              const SizedBox(height: 8),
-              OutlinedButton(
-                onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil(
-                  AppRoutes.home,
-                  (route) => false,
-                ),
-                child: const Text('Back to Home'),
+              Builder(
+                builder: (context) {
+                  final brightness = Theme.of(context).brightness;
+                  final onGradient = AppColors.onSolanaGradient(brightness);
+                  final isDark = brightness == Brightness.dark;
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(999),
+                          boxShadow: AppColors.solanaGlow(strength: 0.7),
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () => Navigator.of(context)
+                                .pushNamed(AppRoutes.tradeHistory),
+                            borderRadius: BorderRadius.circular(999),
+                            child: Ink(
+                              decoration: BoxDecoration(
+                                gradient: AppColors.solanaDiagonal,
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                child: Text(
+                                  'View History',
+                                  textAlign: TextAlign.center,
+                                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                                        color: onGradient,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ), // Solana-gradient history CTA
+                      const SizedBox(height: 12),
+                      Material(
+                        color: isDark ? AppColors.blackMid : AppColors.whiteMid,
+                        borderRadius: BorderRadius.circular(999),
+                        child: InkWell(
+                          onTap: () => Navigator.of(context).pushNamedAndRemoveUntil(
+                            AppRoutes.home,
+                            (route) => false,
+                          ),
+                          borderRadius: BorderRadius.circular(999),
+                          child: Container(
+                            alignment: Alignment.center,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(
+                                color: isDark
+                                    ? AppColors.blackLightest
+                                    : AppColors.whiteDarkest,
+                                width: 1.5,
+                              ),
+                            ),
+                            child: Text(
+                              'Back to Home',
+                              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                                    color: isDark
+                                        ? AppColors.whiteLightest
+                                        : AppColors.blackDarkest,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                            ),
+                          ),
+                        ),
+                      ), // dark / light neutral home CTA
+                    ],
+                  );
+                },
               ),
             ],
           ),
