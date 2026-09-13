@@ -20,14 +20,14 @@ class AppConfig { // class to hold frontend constants and dart-define overrides
 
   /*##### API base URL #####*/
 
-  /// EC2 application_backend base URL. Override with:
-  /// --dart-define=API_BASE_URL=https://your-ec2:8080
-  /// Android emulator loopback to host is 10.0.2.2; a physical phone needs
-  /// your computer's LAN IP or the public EC2 host instead.
+  /// EC2 application_backend base URL (Elastic IP). Override with:
+  /// --dart-define=API_BASE_URL=http://16.58.231.227:8080
+  /// Phone talks to EC2 directly — no USB/computer required after install.
+  /// Android emulator → laptop localhost would be http://10.0.2.2:8080 instead.
   static const apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://10.0.2.2:8080',
-  ); // default to Android emulator → host machine
+    defaultValue: 'http://16.58.231.227:8080',
+  ); // default to AWS Elastic IP for physical devices
 
   /*##### app identity #####*/
 

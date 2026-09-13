@@ -24,6 +24,8 @@ import 'package:flutter/material.dart'; // import Flutter Material UI toolkit
 
 import '../config.dart'; // import paper starting USD default
 import '../routes.dart'; // import named route constants
+import '../services/app_services.dart'; // import market store for last close
+import '../theme/app_theme.dart'; // import direction colors
 
 
 
@@ -52,7 +54,6 @@ class _BuySolPageState extends State<BuySolPage> { // class to track spend amoun
 
   final _amountController = TextEditingController(); // USD amount input
   final double _cashUsd = AppConfig.paperStartingUsd; // stub available cash (wire from portfolio API)
-  final double _solPrice = 0; // stub last close (wire from MarketPayload)
 
   /*########## DISPOSE ##########*/
 
@@ -66,13 +67,13 @@ class _BuySolPageState extends State<BuySolPage> { // class to track spend amoun
 
   /*########## ESTIMATED SOL ##########*/
 
-  double? get _estimatedSol { // function to preview SOL received at stub price
+  double? _estimatedSol(double solPrice) { // function to preview SOL received at live price
 
     final usd = double.tryParse(_amountController.text); // parse field
-    if (usd == null || usd <= 0 || _solPrice <= 0) { // invalid / unknown price
+    if (usd == null || usd <= 0 || solPrice <= 0) { // invalid / unknown price
       return null; // no preview
     }
-    return usd / _solPrice; // estimated fill size
+    return usd / solPrice; // estimated fill size
 
   }
 
@@ -81,55 +82,79 @@ class _BuySolPageState extends State<BuySolPage> { // class to track spend amoun
   @override
   Widget build(BuildContext context) { // function to build buy SOL form
 
-    final estimated = _estimatedSol; // live preview
+    return ListenableBuilder(
+      listenable: marketStore, // price updates from /market
+      builder: (context, _) {
+        final solPrice = marketStore.lastClose ?? 0; // latest close
+        final estimated = _estimatedSol(solPrice); // live preview
+        final preds = marketStore.market?.predictions ?? const []; // forecasts
+        final bullish = preds.isNotEmpty &&
+            solPrice > 0 &&
+            preds.first.predictedClose > solPrice; // Day-1 above spot
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Buy SOL')),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'Available: \$${_cashUsd.toStringAsFixed(2)}',
-              style: Theme.of(context).textTheme.titleMedium,
-            ), // paper USD balance
-            const SizedBox(height: 20),
-            TextField(
-              controller: _amountController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(
-                labelText: 'Amount to spend (USD)',
-                border: OutlineInputBorder(),
-              ),
-              onChanged: (_) => setState(() {}), // refresh preview
-            ), // spend amount
-            const SizedBox(height: 16),
-            Text(
-              estimated == null
-                  ? 'Estimated SOL: —  (set price via /market)'
-                  : 'Estimated SOL: ${estimated.toStringAsFixed(4)}',
-              style: Theme.of(context).textTheme.bodyLarge,
-            ), // live SOL preview
-            const SizedBox(height: 8),
-            Text(
-              'Based on latest forecast when model is bullish (optional note).',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+        return Scaffold(
+          appBar: AppBar(title: const Text('Buy SOL')),
+          body: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Available: \$${_cashUsd.toStringAsFixed(2)}',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ), // paper USD balance
+                const SizedBox(height: 8),
+                Text(
+                  solPrice > 0
+                      ? 'Spot: \$${solPrice.toStringAsFixed(2)}'
+                      : 'Spot: — (load market data first)',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                ), // live price from /market
+                const SizedBox(height: 20),
+                TextField(
+                  controller: _amountController,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: const InputDecoration(
+                    labelText: 'Amount to spend (USD)',
+                    border: OutlineInputBorder(),
                   ),
-            ), // forecast-aware hint stub
-            const Spacer(),
-            FilledButton(
-              onPressed: () {
-                // TODO: validate amount against cash + pass args to confirm page
-                Navigator.of(context).pushNamed(AppRoutes.tradeConfirm);
-              },
-              child: const Text('Review Buy'),
-            ), // go to confirm / receipt
-          ],
-        ),
-      ),
-    ); // buy scaffold
+                  onChanged: (_) => setState(() {}), // refresh preview
+                ), // spend amount
+                const SizedBox(height: 16),
+                Text(
+                  estimated == null
+                      ? 'Estimated SOL: —'
+                      : 'Estimated SOL: ${estimated.toStringAsFixed(4)}',
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ), // live SOL preview
+                const SizedBox(height: 8),
+                Text(
+                  bullish
+                      ? 'Based on latest forecast — model is bullish on Day 1.'
+                      : 'Based on latest forecast when model is bullish.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: bullish
+                            ? AppColors.green
+                            : Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                ), // forecast-aware hint
+                const Spacer(),
+                FilledButton(
+                  onPressed: solPrice <= 0
+                      ? null
+                      : () {
+                          Navigator.of(context).pushNamed(AppRoutes.tradeConfirm);
+                        },
+                  child: const Text('Review Buy'),
+                ), // go to confirm / receipt
+              ],
+            ),
+          ),
+        ); // buy scaffold
+      },
+    );
 
   }
 

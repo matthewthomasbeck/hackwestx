@@ -110,15 +110,22 @@ class ApiService { // class to call application_backend market / identity endpoi
 
   /*########## REFRESH MARKET ##########*/
 
-  Future<Map<String, dynamic>> refreshMarket() async { // function to POST /api/v1/market/refresh pipeline
+  Future<Map<String, dynamic>> refreshMarket({bool force = false}) async { // function to POST /api/v1/market/refresh (async pipeline)
 
     final response = await _client
-        .post(_uri('/api/v1/market/refresh'), headers: _headers())
-        .timeout(_timeout); // trigger yfinance → Tiger → predictor cycle
-    if (response.statusCode < 200 || response.statusCode >= 300) { // non-2xx
+        .post(
+          _uri('/api/v1/market/refresh'),
+          headers: _headers(),
+          body: jsonEncode({'force': force}),
+        )
+        .timeout(_timeout); // kicks off background yfinance → Tiger → predictor
+    // 202 = started, 409 = already running — both mean Flutter should poll GET /market
+    if (response.statusCode != 202 &&
+        response.statusCode != 409 &&
+        (response.statusCode < 200 || response.statusCode >= 300)) { // unexpected failure
       throw Exception('POST /market/refresh failed: ${response.statusCode} ${response.body}'); // surface error
     }
-    return jsonDecode(response.body) as Map<String, dynamic>; // pipeline summary
+    return jsonDecode(response.body) as Map<String, dynamic>; // started / busy summary
 
   }
 

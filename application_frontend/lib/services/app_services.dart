@@ -20,6 +20,7 @@
 
 import 'api_service.dart'; // import EC2 HTTP client
 import 'auth_service.dart'; // import Auth0 session owner
+import 'market_store.dart'; // import shared /market state
 
 
 
@@ -29,6 +30,7 @@ import 'auth_service.dart'; // import Auth0 session owner
 
 final AuthService authService = AuthService(); // app-wide Auth0 session
 final ApiService apiService = ApiService(); // app-wide EC2 client
+final MarketStore marketStore = MarketStore(apiService); // app-wide SOL market snapshot
 
 /*########## SYNC API TOKEN ##########*/
 
