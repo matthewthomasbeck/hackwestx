@@ -47,3 +47,5 @@ THINGS DONE:
 3. set up basic tiger cloud
 4. set up auth0 for user auth and predictor auth
 5. set up yfinance for solana time series
+6. wrote skeleton for application backend
+7. wrote skeleton for predictor backend
