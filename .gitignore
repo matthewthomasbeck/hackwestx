@@ -4,6 +4,8 @@ predictor_backend/.env
 
 application_backend/.env
 
+application_frontend/android/local.properties
+
 hackwestx-flutter-backend.pem
 
 LLM_ADVICE-tailscale_ec2_setup.md

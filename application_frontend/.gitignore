@@ -44,5 +44,8 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
+# Auth0 domain + local SDK paths (also listed in android/.gitignore)
+/android/local.properties
+
 # local backup of full scaffold before skeleton strip
 .full_scaffold_backup/

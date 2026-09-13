@@ -23,6 +23,7 @@ import 'package:flutter/material.dart'; // import Flutter Material UI toolkit
 /*##### import local modules #####*/
 
 import '../routes.dart'; // import named route constants
+import '../services/app_services.dart'; // import Auth0 session restore
 import '../theme/app_theme.dart'; // import brand color tokens
 
 
@@ -71,9 +72,8 @@ class _LoadingPageState extends State<LoadingPage>
 
   /*########## BOOTSTRAP ##########*/
 
-  Future<void> _bootstrap() async { // function to stub auth + first /market then navigate
+  Future<void> _bootstrap() async { // function to restore Auth0 session then navigate
 
-    // TODO: check Auth0 session, fetch GET /api/v1/market, branch on status
     await Future<void>.delayed(const Duration(milliseconds: 900)); // brief splash delay
     if (!mounted) { // disposed during await
       return; // bail
@@ -81,12 +81,18 @@ class _LoadingPageState extends State<LoadingPage>
     setState(() {
       _status = 'Checking session...'; // update status copy
     });
-    await Future<void>.delayed(const Duration(milliseconds: 600)); // second beat
+    final loggedIn = await authService.restoreSession(); // Credentials Manager
+    if (loggedIn) { // valid stored Auth0 token
+      syncApiAccessToken(); // attach Bearer for EC2
+    }
     if (!mounted) { // disposed during await
       return; // bail
     }
-    // Scaffolding default: send to login (wire onboarding / home once Auth0 exists)
-    Navigator.of(context).pushReplacementNamed(AppRoutes.login); // leave splash
+    if (loggedIn) { // skip login when session still valid
+      Navigator.of(context).pushReplacementNamed(AppRoutes.home); // resume into app
+      return; // done
+    }
+    Navigator.of(context).pushReplacementNamed(AppRoutes.login); // need Universal Login
 
   }
 

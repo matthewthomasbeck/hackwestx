@@ -9,7 +9,7 @@ DATABASE_URL=
 
 # === Auth0 user JWT validation (Flutter → EC2) ===
 AUTH0_DOMAIN=
-AUTH0_AUDIENCE=https://api.soothsayer.hackwestx
+AUTH0_AUDIENCE=https://hackwestx.user.auth
 AUTH0_ISSUER=
 
 # === Auth0 M2M → predictor_backend ===

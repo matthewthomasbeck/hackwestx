@@ -23,6 +23,7 @@ import 'package:flutter/material.dart'; // import Flutter Material UI toolkit
 /*##### import local modules #####*/
 
 import '../routes.dart'; // import named route constants
+import '../services/app_services.dart'; // import Auth0 profile / logout
 
 
 
@@ -80,19 +81,37 @@ class _SettingsPageState extends State<SettingsPage> { // class to hold local th
 
   }
 
+  Future<void> _logout() async { // function to Auth0 logout then return to login
+
+    await authService.logout(); // clear Auth0 + local session
+    syncApiAccessToken(); // drop Bearer on ApiService
+    if (!mounted) { // disposed during await
+      return; // bail
+    }
+    Navigator.of(context).pushNamedAndRemoveUntil(
+      AppRoutes.login,
+      (route) => false,
+    ); // back to sign-in
+
+  }
+
   /*########## BUILD ##########*/
 
   @override
   Widget build(BuildContext context) { // function to build settings list
 
+    final profile = authService.user; // Auth0 profile snapshot
+    final displayName = profile?.name ?? 'Paper Trader'; // fallback label
+    final displayEmail = profile?.email ?? 'Signed in'; // fallback subtitle
+
     return Scaffold(
       appBar: AppBar(title: const Text('Account Settings')),
       body: ListView(
         children: [
-          const ListTile(
-            title: Text('Paper Trader'), // Auth0 name stub
-            subtitle: Text('trader@example.com'), // Auth0 email stub
-            leading: Icon(Icons.person_outline),
+          ListTile(
+            title: Text(displayName), // Auth0 name
+            subtitle: Text(displayEmail), // Auth0 email
+            leading: const Icon(Icons.person_outline),
           ),
           SwitchListTile(
             title: const Text('Dark mode'),
@@ -117,13 +136,7 @@ class _SettingsPageState extends State<SettingsPage> { // class to hold local th
           ListTile(
             leading: const Icon(Icons.logout),
             title: const Text('Log out'),
-            onTap: () {
-              // TODO: AuthService.logout() then clear token on ApiService
-              Navigator.of(context).pushNamedAndRemoveUntil(
-                AppRoutes.login,
-                (route) => false,
-              );
-            },
+            onTap: _logout,
           ),
         ],
       ),
