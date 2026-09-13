@@ -86,20 +86,24 @@ class ModelManager: # class to manage LSTM load, device selection, and inference
 
     ########## LOAD MODEL ##########
 
-    def load_model(self) -> LSTMPredictor: # function to load checkpoint weights or construct a fresh LSTM
+    def load_model(self) -> LSTMPredictor: # function to load checkpoint weights or construct a fresh BiGRU-attention model
 
         if self.model is not None: # already loaded
             return self.model # reuse in-memory model
 
         model_path = Path(self.model_path) # path to checkpoint
-        if not model_path.exists(): # missing weights file
-            logger.warning(f"Model file not found at {model_path}. Creating new model.") # warn
-            self.model = LSTMPredictor() # fresh untrained arch
+        if not model_path.exists(): # missing weights file (normal: train per request)
+            logger.info(
+                "No checkpoint at %s. Initializing BiGRU-attention architecture "
+                "(weights are trained per prediction request)",
+                model_path,
+            ) # expected path when no saved weights
+            self.model = LSTMPredictor() # fresh untrained BiGRU-attention arch
             self.model.to(self.device) # place on device
             return self.model # return new model
 
         try:
-            logger.info(f"Loading model from {model_path}") # log load attempt
+            logger.info("Loading BiGRU-attention checkpoint from %s", model_path) # log load attempt
             checkpoint = torch.load(model_path, map_location=self.device) # load to device
 
             ##### handle different checkpoint formats #####
@@ -116,17 +120,17 @@ class ModelManager: # class to manage LSTM load, device selection, and inference
 
             ##### create model and load weights #####
 
-            self.model = LSTMPredictor() # construct arch
+            self.model = LSTMPredictor() # construct BiGRU-attention arch
             self.model.load_state_dict(state_dict) # apply weights
             self.model.to(self.device) # place on device
             self.model.eval() # inference mode
 
-            logger.info("Model loaded successfully") # success
+            logger.info("BiGRU-attention checkpoint loaded successfully") # success
             return self.model # loaded model
 
         except Exception as e: # corrupt / incompatible checkpoint
-            logger.error(f"Error loading model: {e}") # log error
-            logger.info("Creating new model instead") # fallback path
+            logger.error("Error loading BiGRU-attention checkpoint: %s", e) # log error
+            logger.info("Initializing fresh BiGRU-attention architecture instead") # fallback path
             self.model = LSTMPredictor() # fresh model
             self.model.to(self.device) # place on device
             return self.model # return fallback

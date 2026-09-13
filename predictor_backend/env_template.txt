@@ -16,7 +16,7 @@ NUM_CPU_WORKERS=4
 BATCH_SIZE=32
 
 # Model Configuration
-MODEL_PATH=./models/lstm_model.pth
+MODEL_PATH=./models/bigru_attn_model.pth
 SEQUENCE_LENGTH=14
 TRAINING_EPOCHS=100
 TRAINING_BATCH_SIZE=16

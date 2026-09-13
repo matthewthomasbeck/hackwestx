@@ -66,7 +66,7 @@ class Config: # class to hold prediction service settings from environment
 
     ##### Model Configuration #####
 
-    MODEL_PATH: str = os.getenv("MODEL_PATH", "./models/lstm_model.pth") # checkpoint path for LSTM weights
+    MODEL_PATH: str = os.getenv("MODEL_PATH", "./models/bigru_attn_model.pth") # optional BiGRU-attention checkpoint path
 
     ##### Queue Configuration #####
 

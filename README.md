@@ -77,6 +77,6 @@ THINGS DONE:
 18. application backend now pushes data to frontend
 19. application frontend now takes in data from backend
 20. changed model from LSTM placeholder to GRU for better inference
-
+21. redid logging as it was too busy and annoying
 
 

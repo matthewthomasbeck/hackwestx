@@ -123,15 +123,15 @@ def shutdown_handler(signum=None, frame=None): # function to gracefully stop wor
 
 ########## STARTUP ##########
 
-def startup(app): # function to load LSTM weights and start GPU/CPU worker threads
+def startup(app): # function to init BiGRU-attention arch and start GPU/CPU worker threads
 
     logger.info("Starting up prediction service...")
 
     try:
-        app.model_manager.load_model() # load LSTM onto device
-        logger.info("Model loaded successfully")
+        app.model_manager.load_model() # init BiGRU-attention on device
+        logger.info("BiGRU-attention architecture ready")
     except Exception as e:
-        logger.error(f"Failed to load model: {e}", exc_info=True)
+        logger.error(f"Failed to initialize model: {e}", exc_info=True)
         raise
 
     try:
