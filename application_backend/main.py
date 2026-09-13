@@ -38,7 +38,9 @@ from api.market import api_bp, solana_prediction_callback # import market routes
 
 ##### load environment #####
 
-load_dotenv() # load application_backend/.env values
+from pathlib import Path # resolve .env next to this file (cwd-independent)
+
+load_dotenv(Path(__file__).resolve().parent / ".env") # load application_backend/.env
 
 
 
