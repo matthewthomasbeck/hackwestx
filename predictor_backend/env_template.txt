@@ -1,0 +1,30 @@
+# Prediction Service Environment Variables Template
+# Copy this file to .env and fill in your values
+
+# === Interim API key (Time_Series_Predictor; keep until Auth0 M2M is live) ===
+PREDICTION_SERVICE_KEY=your_api_key_here
+
+# === Auth0 M2M verification (application_backend → this service) ===
+# Same audience the app requests via AUTH0_PREDICTOR_AUDIENCE
+AUTH0_DOMAIN=
+AUTH0_AUDIENCE=https://predictor.soothsayer.hackwestx
+AUTH0_ISSUER=
+
+# Worker Configuration
+NUM_GPU_WORKERS=1
+NUM_CPU_WORKERS=4
+BATCH_SIZE=32
+
+# Model Configuration
+MODEL_PATH=./models/lstm_model.pth
+
+# Queue Configuration (if using Redis)
+REDIS_URL=redis://localhost:6379/0
+
+# Logging
+LOG_LEVEL=INFO
+LOG_FILE=
+
+# Server Configuration
+HOST=0.0.0.0
+PORT=8000
