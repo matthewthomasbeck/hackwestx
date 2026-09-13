@@ -10,19 +10,19 @@
 
 
 /*##################################################*/
-/*############### AUTH SERVICE #####################*/
+/*############### AUTH SERVICE (STUB) ##############*/
 /*##################################################*/
 
 
 /*########## AUTH USER ##########*/
 
-class AuthUser { // class to hold minimal logged-in user fields
+class AuthUser { // class to hold minimal logged-in user fields for settings / headers
 
   const AuthUser({
     required this.sub,
     this.email,
     this.name,
-  }); // construct from Auth0 claims
+  }); // construct from Auth0 claims once wired
 
   final String sub; // Auth0 subject
   final String? email; // optional email claim
@@ -33,25 +33,37 @@ class AuthUser { // class to hold minimal logged-in user fields
 
 /*########## AUTH SERVICE ##########*/
 
-class AuthService { // class to handle Auth0 login / logout
+class AuthService { // class to stub Auth0 login / logout until native SDK is wired
 
-  AuthUser? get user => null; // skeleton
-  String? get accessToken => null; // skeleton
-  bool get isLoggedIn => false; // skeleton
+  AuthUser? _user; // in-memory session user
+  String? _accessToken; // in-memory Bearer token
+
+  AuthUser? get user => _user; // current user or null
+  String? get accessToken => _accessToken; // current token or null
+  bool get isLoggedIn => _accessToken != null && _accessToken!.isNotEmpty; // session check
 
   /*########## LOGIN ##########*/
 
-  Future<AuthUser> login() async { // function to perform Auth0 login
+  Future<AuthUser> login() async { // function to perform Auth0 login (stub for scaffolding)
 
-    return const AuthUser(sub: ''); // skeleton
+    // TODO: wire flutter_appauth / Auth0 Universal Login here
+    _accessToken = 'stub-access-token'; // placeholder Bearer for local UI navigation
+    _user = const AuthUser(
+      sub: 'auth0|stub',
+      email: 'trader@example.com',
+      name: 'Paper Trader',
+    ); // placeholder profile
+    return _user!; // return stub user
 
   }
 
   /*########## LOGOUT ##########*/
 
-  Future<void> logout() async { // function to clear local Auth0 session
+  Future<void> logout() async { // function to clear local Auth0 session (stub)
 
-    // skeleton
+    // TODO: clear Auth0 credentials / secure storage
+    _accessToken = null; // drop token
+    _user = null; // drop profile
 
   }
 

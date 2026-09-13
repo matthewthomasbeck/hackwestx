@@ -56,12 +56,14 @@ class SoothsayerApp extends StatelessWidget { // class to own MaterialApp theme 
   Widget build(BuildContext context) { // function to build MaterialApp shell
 
     return MaterialApp(
-      title: AppConfig.appName,
-      theme: AppTheme.light,
-      darkTheme: AppTheme.dark,
-      initialRoute: AppRoutes.loading,
-      routes: AppRoutes.routes,
-    ); // skeleton MaterialApp
+      title: AppConfig.appName, // window / task title
+      debugShowCheckedModeBanner: false, // hide debug banner for demos
+      theme: AppTheme.light, // purple / blue / green light theme
+      darkTheme: AppTheme.dark, // night-mode trading theme
+      themeMode: ThemeMode.system, // follow OS until settings toggle is wired
+      initialRoute: AppRoutes.loading, // start on loading / splash
+      routes: AppRoutes.routes, // named route → page map
+    ); // root MaterialApp
 
   }
 

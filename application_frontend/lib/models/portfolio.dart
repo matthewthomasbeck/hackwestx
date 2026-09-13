@@ -16,7 +16,7 @@
 
 /*########## PAPER PORTFOLIO ##########*/
 
-class PaperPortfolio { // class to hold paper cash + SOL holdings
+class PaperPortfolio { // class to hold paper cash + SOL holdings (stub until trade APIs exist)
 
   const PaperPortfolio({
     required this.cashUsd,
@@ -32,13 +32,16 @@ class PaperPortfolio { // class to hold paper cash + SOL holdings
 
   double marketValue(double solPrice) { // function to compute cash + SOL mark-to-market value
 
-    return 0; // skeleton
+    return cashUsd + (solHeld * solPrice); // total portfolio USD
 
   }
 
   double unrealizedPnl(double solPrice) { // function to compute unrealized P&L vs average buy
 
-    return 0; // skeleton
+    if (solHeld <= 0) { // no position
+      return 0; // flat
+    }
+    return (solPrice - avgBuyPrice) * solHeld; // mark vs cost basis
 
   }
 
@@ -47,7 +50,7 @@ class PaperPortfolio { // class to hold paper cash + SOL holdings
 
 /*########## PAPER TRADE ##########*/
 
-class PaperTrade { // class to hold one paper buy/sell row for history / receipt
+class PaperTrade { // class to hold one paper buy/sell row for history / receipt screens
 
   const PaperTrade({
     required this.id,
@@ -65,6 +68,6 @@ class PaperTrade { // class to hold one paper buy/sell row for history / receipt
   final double solAmount; // SOL filled
   final double price; // fill price
   final DateTime timestamp; // fill time
-  final bool? forecastCorrect; // optional accuracy badge
+  final bool? forecastCorrect; // optional accuracy badge once backend supports it
 
 }

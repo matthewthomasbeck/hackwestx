@@ -18,14 +18,25 @@
 
 class AppConfig { // class to hold frontend constants and dart-define overrides
 
+  /*##### API base URL #####*/
+
+  /// EC2 application_backend base URL. Override with:
+  /// --dart-define=API_BASE_URL=https://your-ec2:8080
+  /// Android emulator loopback to host is 10.0.2.2; a physical phone needs
+  /// your computer's LAN IP or the public EC2 host instead.
   static const apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
     defaultValue: 'http://10.0.2.2:8080',
-  ); // EC2 / emulator API base URL
+  ); // default to Android emulator → host machine
 
-  static const appName = 'Solana Soothsayer'; // display name
-  static const appTagline = 'Forecast SOL. Paper-trade with confidence.'; // tagline
-  static const packageId = 'com.hackwestx.soothsayer'; // application id
-  static const paperStartingUsd = 10000.0; // paper starting cash
+  /*##### app identity #####*/
+
+  static const appName = 'Solana Soothsayer'; // display name for MaterialApp / UI
+  static const appTagline = 'Forecast SOL. Paper-trade with confidence.'; // login / onboarding line
+  static const packageId = 'com.hackwestx.soothsayer'; // suggested Android/iOS application id
+
+  /*##### paper trading defaults (mirror backend env until APIs exist) #####*/
+
+  static const paperStartingUsd = 10000.0; // starting paper cash for portfolio stubs
 
 }

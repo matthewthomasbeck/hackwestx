@@ -18,6 +18,10 @@
 
 /*##### import necessary libraries #####*/
 
+import 'dart:convert'; // import JSON encode/decode helpers
+
+/*##### import third-party libraries #####*/
+
 import 'package:http/http.dart' as http; // import HTTP client for EC2 backend
 
 /*##### import local modules #####*/
@@ -47,13 +51,15 @@ class ApiService { // class to call application_backend market / identity endpoi
 
   final http.Client _client; // shared HTTP client
   final String baseUrl; // EC2 application_backend origin
-  String? accessToken; // Auth0 Bearer token from login
+  String? accessToken; // Auth0 Bearer token from login (stubbed until Auth0 wired)
+
+  static const _timeout = Duration(seconds: 15); // request timeout
 
   /*########## URI ##########*/
 
   Uri _uri(String path) { // function to join base URL + path into a Uri
 
-    return Uri(); // skeleton
+    return Uri.parse('$baseUrl$path'); // absolute URI
 
   }
 
@@ -61,31 +67,58 @@ class ApiService { // class to call application_backend market / identity endpoi
 
   Map<String, String> _headers() { // function to build JSON + optional Bearer headers
 
-    return {}; // skeleton
+    final headers = <String, String>{
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    }; // base headers
+    final token = accessToken; // current token snapshot
+    if (token != null && token.isNotEmpty) { // Auth0 session present
+      headers['Authorization'] = 'Bearer $token'; // attach user JWT
+    }
+    return headers; // request headers
 
   }
 
   /*########## GET ME ##########*/
 
-  Future<Map<String, dynamic>> getMe() async { // function to GET /api/v1/me
+  Future<Map<String, dynamic>> getMe() async { // function to GET /api/v1/me for Auth0 identity
 
-    return {}; // skeleton
+    final response = await _client
+        .get(_uri('/api/v1/me'), headers: _headers())
+        .timeout(_timeout); // identity request
+    if (response.statusCode < 200 || response.statusCode >= 300) { // non-2xx
+      throw Exception('GET /me failed: ${response.statusCode} ${response.body}'); // surface error
+    }
+    return jsonDecode(response.body) as Map<String, dynamic>; // claims payload
 
   }
 
   /*########## GET MARKET ##########*/
 
-  Future<MarketPayload> getMarket() async { // function to GET /api/v1/market
+  Future<MarketPayload> getMarket() async { // function to GET /api/v1/market for chart JSON
 
-    return const MarketPayload(asset: 'SOL', status: 'empty'); // skeleton
+    final response = await _client
+        .get(_uri('/api/v1/market'), headers: _headers())
+        .timeout(_timeout); // market request
+    if (response.statusCode < 200 || response.statusCode >= 300) { // non-2xx
+      throw Exception('GET /market failed: ${response.statusCode} ${response.body}'); // surface error
+    }
+    final json = jsonDecode(response.body) as Map<String, dynamic>; // decode body
+    return MarketPayload.fromJson(json); // typed market snapshot
 
   }
 
   /*########## REFRESH MARKET ##########*/
 
-  Future<Map<String, dynamic>> refreshMarket() async { // function to POST /api/v1/market/refresh
+  Future<Map<String, dynamic>> refreshMarket() async { // function to POST /api/v1/market/refresh pipeline
 
-    return {}; // skeleton
+    final response = await _client
+        .post(_uri('/api/v1/market/refresh'), headers: _headers())
+        .timeout(_timeout); // trigger yfinance → Tiger → predictor cycle
+    if (response.statusCode < 200 || response.statusCode >= 300) { // non-2xx
+      throw Exception('POST /market/refresh failed: ${response.statusCode} ${response.body}'); // surface error
+    }
+    return jsonDecode(response.body) as Map<String, dynamic>; // pipeline summary
 
   }
 
@@ -93,7 +126,7 @@ class ApiService { // class to call application_backend market / identity endpoi
 
   void dispose() { // function to close the underlying HTTP client
 
-    // skeleton
+    _client.close(); // free client resources
 
   }
 

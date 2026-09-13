@@ -22,17 +22,17 @@ import 'package:flutter/material.dart'; // import Flutter Material for Widget ty
 
 /*##### import local modules #####*/
 
-import 'pages/buy_sol_page.dart'; // import buy SOL page
-import 'pages/forecast_detail_page.dart'; // import forecast detail page
-import 'pages/home_page.dart'; // import home page
-import 'pages/loading_page.dart'; // import loading page
-import 'pages/login_page.dart'; // import login page
-import 'pages/onboarding_page.dart'; // import onboarding page
-import 'pages/portfolio_page.dart'; // import portfolio page
-import 'pages/settings_page.dart'; // import settings page
-import 'pages/status_pages.dart'; // import empty / pending / error pages
-import 'pages/trade_confirm_page.dart'; // import trade confirm page
-import 'pages/trade_history_page.dart'; // import trade history page
+import 'pages/buy_sol_page.dart'; // import paper buy SOL screen
+import 'pages/forecast_detail_page.dart'; // import forecast detail screen
+import 'pages/home_page.dart'; // import home chart screen
+import 'pages/loading_page.dart'; // import splash / loading screen
+import 'pages/login_page.dart'; // import Auth0 login screen
+import 'pages/onboarding_page.dart'; // import first-run onboarding screen
+import 'pages/portfolio_page.dart'; // import paper portfolio screen
+import 'pages/settings_page.dart'; // import account settings screen
+import 'pages/status_pages.dart'; // import empty / pending / error screens
+import 'pages/trade_confirm_page.dart'; // import trade confirm / receipt screen
+import 'pages/trade_history_page.dart'; // import trade history screen
 
 
 
@@ -47,39 +47,39 @@ import 'pages/trade_history_page.dart'; // import trade history page
 
 class AppRoutes { // class to hold named route strings and MaterialApp route map
 
-  static const loading = '/'; // loading route
-  static const login = '/login'; // login route
-  static const onboarding = '/onboarding'; // onboarding route
-  static const home = '/home'; // home route
-  static const buySol = '/buy-sol'; // buy SOL route
-  static const forecastDetail = '/forecast'; // forecast route
-  static const portfolio = '/portfolio'; // portfolio route
-  static const tradeConfirm = '/trade-confirm'; // trade confirm route
+  static const loading = '/'; // initial splash / loading route
+  static const login = '/login'; // Auth0 login route
+  static const onboarding = '/onboarding'; // first-run onboarding route
+  static const home = '/home'; // main chart home route
+  static const buySol = '/buy-sol'; // paper buy SOL route
+  static const forecastDetail = '/forecast'; // forecast detail route
+  static const portfolio = '/portfolio'; // paper portfolio route
+  static const tradeConfirm = '/trade-confirm'; // trade confirm / receipt route
   static const tradeHistory = '/trade-history'; // trade history route
-  static const settings = '/settings'; // settings route
-  static const empty = '/status/empty'; // empty status route
-  static const pending = '/status/pending'; // pending status route
-  static const error = '/status/error'; // error status route
+  static const settings = '/settings'; // account settings route
+  static const empty = '/status/empty'; // empty market-data status route
+  static const pending = '/status/pending'; // predictions-pending status route
+  static const error = '/status/error'; // error / retry status route
 
   /*########## ROUTES MAP ##########*/
 
-  static Map<String, WidgetBuilder> get routes { // function to build named route map
+  static Map<String, WidgetBuilder> get routes { // function to build named route → page map
 
     return {
-      loading: (_) => const LoadingPage(),
-      login: (_) => const LoginPage(),
-      onboarding: (_) => const OnboardingPage(),
-      home: (_) => const HomePage(),
-      buySol: (_) => const BuySolPage(),
-      forecastDetail: (_) => const ForecastDetailPage(),
-      portfolio: (_) => const PortfolioPage(),
-      tradeConfirm: (_) => const TradeConfirmPage(),
-      tradeHistory: (_) => const TradeHistoryPage(),
-      settings: (_) => const SettingsPage(),
-      empty: (_) => const EmptyStatusPage(),
-      pending: (_) => const PendingStatusPage(),
-      error: (_) => const ErrorStatusPage(),
-    }; // skeleton route map
+      loading: (_) => const LoadingPage(), // splash while auth + first /market resolve
+      login: (_) => const LoginPage(), // Auth0 sign-in
+      onboarding: (_) => const OnboardingPage(), // swipeable intro cards
+      home: (_) => const HomePage(), // SOL chart + quick actions
+      buySol: (_) => const BuySolPage(), // amount + review buy
+      forecastDetail: (_) => const ForecastDetailPage(), // next 3 predicted closes
+      portfolio: (_) => const PortfolioPage(), // cash / holdings / P&L
+      tradeConfirm: (_) => const TradeConfirmPage(), // confirm then receipt
+      tradeHistory: (_) => const TradeHistoryPage(), // past paper trades
+      settings: (_) => const SettingsPage(), // profile / theme / logout
+      empty: (_) => const EmptyStatusPage(), // no market data yet
+      pending: (_) => const PendingStatusPage(), // generating predictions
+      error: (_) => const ErrorStatusPage(), // friendly error + retry
+    }; // MaterialApp.routes map
 
   }
 
