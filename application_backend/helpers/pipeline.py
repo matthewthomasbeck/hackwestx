@@ -108,31 +108,43 @@ def run_solana_update_pipeline(forecast_days=None, force=False): # function to o
 
     logger.info("Starting Solana update pipeline (forecast_days=%s force=%s)", forecast_days, force) # log start
 
+    ##### 0) schema (idempotent) #####
+
+    tiger_db.ensure_schema() # create hypertables / PK(time) if missing
+
     ##### 1) latest Tiger timestamp #####
 
-    # last_time = tiger_db.get_latest_ohlcv_time()
-    last_time = None # skeleton placeholder until tiger_db is wired
+    last_time = tiger_db.get_latest_ohlcv_time() # MAX(time) from sol_ohlcv
     summary["last_tiger_time"] = last_time.isoformat() if last_time else None # record last time
 
     if not force and not needs_update(last_time): # already current
         logger.info("Tiger OHLCV already current — skipping fetch/predict") # skip work
-        # Still refresh frontend cache from Tiger when implemented
-        # bundle = tiger_db.read_market_bundle(forecast_days=forecast_days)
-        # frontend_delivery.send_to_frontend(
-        #     frontend_delivery.build_real_plus_predictions_payload(
-        #         bundle["real"], bundle["predictions"], forecast_days
-        #     )
-        # )
+        bundle = tiger_db.read_market_bundle(forecast_days=forecast_days) # reload cache from Tiger
+        frontend_delivery.send_to_frontend(
+            frontend_delivery.build_real_plus_predictions_payload(
+                bundle["real"], bundle["predictions"], forecast_days
+            )
+        ) # serve cached Tiger snapshot
         summary["reason"] = "already_up_to_date" # no fetch needed
         return summary # early exit
 
     ##### 2) fetch yfinance and upsert real prices #####
 
-    # new_rows = yfinance_solana.fetch_solana_since(last_time)
-    # tiger_db.upsert_ohlcv(new_rows)
-    # ohlcv_data = tiger_db.read_ohlcv()
-    ohlcv_data: Dict[str, Any] = {"asset": "SOL", "series": []} # skeleton empty series
+    new_rows = yfinance_solana.fetch_solana_since(None if force else last_time) # full or incremental
+    written = tiger_db.upsert_ohlcv(new_rows) # persist candles
+    summary["rows_fetched"] = len(new_rows) # yfinance count
+    summary["rows_upserted"] = written # tiger write count
+    ohlcv_data = tiger_db.read_ohlcv() # read-back for frontend / later predictor
     summary["updated"] = True # mark update attempted
+
+    # Console-friendly sample so local/EC2 logs prove the path works
+    series = ohlcv_data.get("series") or [] # full series
+    sample = series[-3:] if series else [] # last few candles
+    logger.info(
+        "SOL OHLCV ready (bars=%s sample_tail=%s)",
+        len(series),
+        sample,
+    ) # print usable proof to console/logs
 
     ##### 3) serve real data to frontend while predictions run #####
 
@@ -141,11 +153,13 @@ def run_solana_update_pipeline(forecast_days=None, force=False): # function to o
 
     ##### 4) call predictor, wait, persist predictions #####
 
-    # prediction_json = prediction_client.run_predictions(ohlcv_data, num_predictions=forecast_days)
+    # Still stubbed: Auth0 M2M vs API key + payload normalize + wait_for_predictions
+    # prediction_json = prediction_client.run_predictions(ohlcv_data, num_predictions=min(forecast_days, 3))
     # tiger_db.upsert_predictions(prediction_json["rows"])
     # predictions = tiger_db.read_predictions()
-    predictions: Dict[str, Any] = {"series": []} # skeleton empty forecasts
-    summary["predictions_run"] = True # mark predict step reached
+    predictions: Dict[str, Any] = {"asset": "SOL", "series": []} # empty until predictor wired
+    summary["predictions_run"] = False # predict step not live yet
+    summary["predictions_reason"] = "predictor_not_wired" # explicit gap
 
     ##### 5–6) serve real + predictions #####
 
@@ -153,9 +167,9 @@ def run_solana_update_pipeline(forecast_days=None, force=False): # function to o
         ohlcv_data,
         predictions,
         forecast_days,
-    ) # ready payload
+    ) # ready payload (predictions may be empty)
     frontend_delivery.send_to_frontend(final_payload) # cache/webhook final
 
-    logger.info("Solana update pipeline skeleton finished") # log done
-    summary["reason"] = "skeleton_completed" # stash-level completion
+    logger.info("Solana update pipeline finished (yfinance + Tiger; predictor pending)") # log done
+    summary["reason"] = "ohlcv_updated" # real data path completed
     return summary # return for refresh API / logs
