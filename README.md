@@ -56,4 +56,5 @@ THINGS DONE:
 12. successfully started both backend systems (but yet to pressure test)
 13. application backend successfully downloads latest SOL timeseries data and stores it in timeseries optimized Tiger DB
 14. predictor backend successfully authenticating with auth0 so random people can't call my GPU
+15. appliaction backend to predictor backend to application backend pipeline complete with complete tiger cloud and auth0 predictor integration
 
