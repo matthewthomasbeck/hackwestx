@@ -1,5 +1,11 @@
 .env*
 
+predictor_backend/.env
+
+application_backend/.env
+
 hackwestx-flutter-backend.pem
 
-LLM_ADVICE.md
+LLM_ADVICE-tailscale_ec2_setup.md
+
+LLM_ADVICE-tiger_auth0_solana_setup.md

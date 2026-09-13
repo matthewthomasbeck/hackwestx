@@ -44,4 +44,6 @@ Prediction Service Components:
 THINGS DONE:
 1. set up AWS EC2 isntance to hold my flutter backend
 2. set up Tailscale and EC2 VPN to mesh my AWS backend and my Desktop with its beefy GPU
-
+3. set up basic tiger cloud
+4. set up auth0 for user auth and predictor auth
+5. set up yfinance for solana time series
