@@ -38,7 +38,7 @@ import torch # import torch for CUDA availability in /status
 ########## CREATE BLUEPRINT / LOGGER ##########
 
 health_bp = Blueprint("health", __name__) # create blueprint for health/status routes
-logger = logging.getLogger("prediction_service") # create module logger
+logger = logging.getLogger(__name__) # create module logger
 
 
 

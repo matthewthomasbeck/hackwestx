@@ -42,7 +42,7 @@ load_dotenv() # load optional Solana-related environment variables
 
 ########## CREATE LOGGER ##########
 
-logger = logging.getLogger("prediction_service") # create module logger aligned with service name
+logger = logging.getLogger(__name__) # create module logger
 
 
 

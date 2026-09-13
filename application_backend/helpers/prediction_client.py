@@ -95,7 +95,7 @@ def _default_callback_url(): # function to build predictor→EC2 callback URL fr
     callback_base = os.getenv("CALLBACK_BASE_URL", "").rstrip("/") # must be Tailscale-reachable EC2 URL
     if not callback_base: # required for async results
         raise ValueError(
-            "CALLBACK_BASE_URL is not set — use the EC2 Tailscale IP/hostname "
+            "CALLBACK_BASE_URL is not set - use the EC2 Tailscale IP/hostname "
             "(e.g. http://100.x.y.z:8080), not localhost"
         ) # fail fast
     return f"{callback_base}/callback/solana" # root callback path mounted in main.py

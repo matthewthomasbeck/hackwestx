@@ -43,7 +43,7 @@ from utils.json_formatter import validate_json_structure # import timeSeries JSO
 ########## CREATE BLUEPRINT / LOGGER ##########
 
 api_bp = Blueprint("api", __name__) # create blueprint for /api/v1 prediction routes
-logger = logging.getLogger("prediction_service") # create module logger
+logger = logging.getLogger(__name__) # create module logger
 
 
 

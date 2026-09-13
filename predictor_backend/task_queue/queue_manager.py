@@ -40,7 +40,7 @@ from typing import Any, Dict, Optional # import typing helpers
 
 ########## CREATE LOGGER ##########
 
-logger = logging.getLogger("prediction_service") # create module logger
+logger = logging.getLogger(__name__) # create module logger
 
 
 

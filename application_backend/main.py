@@ -51,6 +51,20 @@ load_dotenv(Path(__file__).resolve().parent / ".env") # load application_backend
 ##################################################
 
 
+########## MODULE PATH FORMATTER ##########
+
+class ModulePathFormatter(logging.Formatter): # class to render logger name as helpers/file.py
+
+    def format(self, record: logging.LogRecord) -> str: # function to inject module_path then format
+
+        name = record.name # dotted logger name from getLogger(__name__)
+        if name in ("__main__", "root"): # entrypoint / root fallback
+            record.module_path = "main.py" if name == "__main__" else "root"
+        else:
+            record.module_path = name.replace(".", "/") + ".py" # helpers/auth0.py style
+        return super().format(record) # apply format string
+
+
 ########## SETUP LOGGING ##########
 
 def setup_logging(): # function to configure root console/file logging from env
@@ -61,30 +75,46 @@ def setup_logging(): # function to configure root console/file logging from env
     root = logging.getLogger() # configure root logger
     root.setLevel(level) # apply level
 
-    formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    ) # shared line format
+    formatter = ModulePathFormatter(
+        "%(asctime)s - %(levelname)s (%(module_path)s): %(message)s"
+    ) # timestamp - LEVEL (path/file.py): message
 
-    if not any(isinstance(h, logging.StreamHandler) for h in root.handlers): # avoid duplicate console
+    if not any(
+        isinstance(h, logging.StreamHandler) and not isinstance(h, logging.FileHandler)
+        for h in root.handlers
+    ): # avoid duplicate console
         ch = logging.StreamHandler() # stdout/stderr stream
         ch.setLevel(level) # match root level
         ch.setFormatter(formatter) # apply format
         root.addHandler(ch) # attach console handler
+    else:
+        for handler in root.handlers:
+            if isinstance(handler, logging.StreamHandler) and not isinstance(handler, logging.FileHandler):
+                handler.setFormatter(formatter)
+                handler.setLevel(level)
 
     log_file = os.getenv("LOG_FILE") # optional file path
     if log_file: # file logging enabled
         log_dir = os.path.dirname(log_file) # parent directory
         if log_dir: # ensure directory exists
             os.makedirs(log_dir, exist_ok=True) # mkdir -p
-        if not any(
-            isinstance(h, logging.FileHandler)
-            and getattr(h, "baseFilename", None) == os.path.abspath(log_file)
-            for h in root.handlers
-        ): # avoid duplicate file handlers for same path
+        abs_path = os.path.abspath(log_file)
+        existing = next(
+            (
+                h for h in root.handlers
+                if isinstance(h, logging.FileHandler)
+                and getattr(h, "baseFilename", None) == abs_path
+            ),
+            None,
+        )
+        if existing is None:
             fh = logging.FileHandler(log_file) # append to log file
             fh.setLevel(level) # match root level
             fh.setFormatter(formatter) # apply format
             root.addHandler(fh) # attach file handler
+        else:
+            existing.setFormatter(formatter)
+            existing.setLevel(level)
 
 
 
@@ -143,7 +173,7 @@ def main(): # function to start logging, optional startup pipeline, then serve F
     if os.getenv("RUN_PIPELINE_ON_START", "false").lower() == "true": # opt-in startup refresh
         try:
             from helpers.pipeline import run_solana_update_pipeline # lazy import pipeline
-            logger.info("RUN_PIPELINE_ON_START=true — executing Solana update pipeline") # log start
+            logger.info("RUN_PIPELINE_ON_START=true - executing Solana update pipeline") # log start
             run_solana_update_pipeline() # run Solana update once
         except TimeoutError as e: # predictor callback never arrived
             logger.error("Startup pipeline timed out: %s", e) # soft/hard fail below

@@ -60,7 +60,7 @@ load_dotenv() # load predictor_backend/.env values
 queue_manager = None # set by create_app(); used by shutdown_handler
 model_manager = None # set by create_app(); used by shutdown_handler
 worker_manager = None # set by create_app(); used by shutdown_handler
-logger = logging.getLogger("prediction_service") # module logger for lifecycle messages
+logger = logging.getLogger(__name__) # module logger for lifecycle messages
 
 
 

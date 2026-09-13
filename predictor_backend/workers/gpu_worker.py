@@ -46,7 +46,7 @@ from task_queue.task_handler import TaskHandler # import LSTM process + callback
 
 ########## CREATE LOGGER ##########
 
-logger = logging.getLogger("prediction_service") # create module logger
+logger = logging.getLogger(__name__) # create module logger
 
 
 

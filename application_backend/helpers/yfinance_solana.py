@@ -181,7 +181,7 @@ def fetch_solana_ohlcv( # function to download SOL OHLCV from Yahoo Finance and 
 def fetch_solana_since(last_time): # function to fetch only SOL bars after last Tiger timestamp (or full history)
 
     if last_time is None: # no prior Tiger data
-        logger.info("No prior Tiger data — fetching full default history") # full backfill
+        logger.info("No prior Tiger data - fetching full default history") # full backfill
         return fetch_solana_ohlcv() # default period/interval
 
     # Start one day after last stored bar so we don't re-download the same candle

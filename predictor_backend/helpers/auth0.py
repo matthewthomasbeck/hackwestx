@@ -49,7 +49,7 @@ load_dotenv(Path(__file__).resolve().parent.parent / ".env") # load predictor_ba
 
 ########## CREATE LOGGER / JWKS CACHE ##########
 
-logger = logging.getLogger("prediction_service") # create module logger aligned with service name
+logger = logging.getLogger(__name__) # create module logger
 
 _jwks_client: Optional[PyJWKClient] = None # cached PyJWKClient for Auth0 JWKS
 _jwks_client_domain: Optional[str] = None # domain the cached client was built for

@@ -65,7 +65,7 @@ from utils.preprocessing import (
 
 ########## CREATE LOGGER ##########
 
-logger = logging.getLogger("prediction_service") # create module logger
+logger = logging.getLogger(__name__) # create module logger
 
 
 

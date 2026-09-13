@@ -47,7 +47,7 @@ from models.lstm_model import LSTMPredictor # import LSTM to train
 
 ########## CREATE LOGGER ##########
 
-logger = logging.getLogger("prediction_service") # create module logger
+logger = logging.getLogger(__name__) # create module logger
 
 
 

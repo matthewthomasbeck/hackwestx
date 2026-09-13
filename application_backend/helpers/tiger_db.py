@@ -102,10 +102,10 @@ def _database_url(): # function to resolve DATABASE_URL or compose it from TIGER
         if _uri_has_password(database_url): # complete URI
             return database_url # use as-is
         if password.strip(): # fill from TIGER_PASSWORD
-            logger.info("DATABASE_URL missing password — injecting TIGER_PASSWORD") # no secret logged
+            logger.info("DATABASE_URL missing password - injecting TIGER_PASSWORD") # no secret logged
             return _inject_password(database_url, password) # patched URI
         raise ValueError(
-            "DATABASE_URL has no password and TIGER_PASSWORD is empty — "
+            "DATABASE_URL has no password and TIGER_PASSWORD is empty - "
             "set TIGER_PASSWORD in application_backend/.env "
             "(quote it if it contains # or spaces)"
         ) # fail clear
@@ -119,7 +119,7 @@ def _database_url(): # function to resolve DATABASE_URL or compose it from TIGER
         raise ValueError("DATABASE_URL or TIGER_HOST must be set") # fail fast
     if not password.strip(): # Tiger always requires a password
         raise ValueError(
-            "TIGER_PASSWORD is empty — set it in application_backend/.env "
+            "TIGER_PASSWORD is empty - set it in application_backend/.env "
             "(quote it if it contains # or spaces)"
         ) # fail fast before fe_sendauth
 

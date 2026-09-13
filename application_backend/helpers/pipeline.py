@@ -118,7 +118,7 @@ def run_solana_update_pipeline(forecast_days=None, force=False): # function to o
     summary["last_tiger_time"] = last_time.isoformat() if last_time else None # record last time
 
     if not force and not needs_update(last_time): # already current
-        logger.info("Tiger OHLCV already current — skipping fetch/predict") # skip work
+        logger.info("Tiger OHLCV already current - skipping fetch/predict") # skip work
         bundle = tiger_db.read_market_bundle(forecast_days=forecast_days) # reload cache from Tiger
         frontend_delivery.send_to_frontend(
             frontend_delivery.build_real_plus_predictions_payload(

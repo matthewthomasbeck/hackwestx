@@ -45,7 +45,7 @@ from workers.gpu_worker import GPUWorker # import GPU inference worker class
 
 ########## CREATE LOGGER ##########
 
-logger = logging.getLogger("prediction_service") # create module logger
+logger = logging.getLogger(__name__) # create module logger
 
 
 

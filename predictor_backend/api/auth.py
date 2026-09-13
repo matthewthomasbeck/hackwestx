@@ -44,7 +44,7 @@ import config # import service config for interim PREDICTION_SERVICE_KEY
 
 ########## CREATE LOGGER ##########
 
-logger = logging.getLogger("prediction_service") # create module logger aligned with service name
+logger = logging.getLogger(__name__) # create module logger
 
 
 
@@ -85,7 +85,7 @@ def verify_api_key(f): # decorator to verify Authorization Bearer (Auth0 M2M or 
                 # Emergency fallback: allow static key if Auth0 is down mid-demo
                 if token == config.config.PREDICTION_SERVICE_KEY: # shared secret still valid
                     logger.warning(
-                        "Auth0 M2M validation failed (%s); accepted PREDICTION_SERVICE_KEY fallback",
+                        "Auth0 M2M validation failed (%s), accepted PREDICTION_SERVICE_KEY fallback",
                         e,
                     ) # warn so fallback use is visible
                     return f(*args, **kwargs) # proceed with interim key
