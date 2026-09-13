@@ -44,14 +44,5 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-# Widget Preview related
-.widget_preview/
-
-# Extra safety nets (also covered by android/.gitignore + ios/.gitignore)
-android/.gradle/
-android/local.properties
-ios/Flutter/ephemeral/
-ios/Pods/
-
 # local backup of full scaffold before skeleton strip
 .full_scaffold_backup/

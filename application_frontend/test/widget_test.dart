@@ -23,6 +23,7 @@ import 'package:flutter_test/flutter_test.dart'; // import Flutter widget tester
 /*##### import local modules #####*/
 
 import 'package:soothsayer/main.dart'; // import SoothsayerApp root
+import 'package:soothsayer/pages/login_page.dart'; // import login for post-splash assert
 
 
 
@@ -37,10 +38,16 @@ import 'package:soothsayer/main.dart'; // import SoothsayerApp root
 
 void main() { // function to run frontend scaffolding smoke tests
 
-  testWidgets('app boots', (WidgetTester tester) async { // smoke: app mounts
+  testWidgets('app boots to loading then login', (WidgetTester tester) async { // smoke: splash → login
 
     await tester.pumpWidget(const SoothsayerApp()); // mount app
-    // skeleton
+    expect(find.textContaining('Loading'), findsOneWidget); // splash status visible
+
+    await tester.pump(const Duration(milliseconds: 1600)); // advance bootstrap timers
+    await tester.pumpAndSettle(); // finish navigation animation
+
+    expect(find.byType(LoginPage), findsOneWidget); // landed on login scaffolding
+    expect(find.text('Sign in with Auth0'), findsOneWidget); // primary CTA present
 
   });
 
