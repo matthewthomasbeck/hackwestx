@@ -116,7 +116,10 @@ class ApiService { // class to call application_backend market / identity endpoi
         .post(
           _uri('/api/v1/market/refresh'),
           headers: _headers(),
-          body: jsonEncode({'force': force}),
+          body: jsonEncode({
+            'force': force,
+            'forecast_days': 5, // always request full 5-day horizon
+          }),
         )
         .timeout(_timeout); // kicks off background yfinance → Tiger → predictor
     // 202 = started, 409 = already running — both mean Flutter should poll GET /market

@@ -98,7 +98,8 @@ def run_solana_update_pipeline(forecast_days=None, force=False): # function to o
     # 5) upsert predictions into Tiger sol_predictions
     # 6) send real + x-day predictions JSON to frontend
 
-    forecast_days = forecast_days or int(os.getenv("FORECAST_DAYS", "7")) # horizon from arg/env
+    forecast_days = forecast_days or int(os.getenv("FORECAST_DAYS", "5")) # horizon from arg/env
+    forecast_days = max(1, min(int(forecast_days), 5)) # predictor hard cap is 5
     summary: Dict[str, Any] = {
         "asset": "SOL",
         "forecast_days": forecast_days,
@@ -153,7 +154,7 @@ def run_solana_update_pipeline(forecast_days=None, force=False): # function to o
 
     ##### 4) call predictor, wait, persist predictions #####
 
-    num_predictions = max(1, min(int(forecast_days), 5)) # predictor hard cap is 5
+    num_predictions = forecast_days # already clamped to 1..5 above
     summary["num_predictions"] = num_predictions # record capped horizon
     callback_payload = prediction_client.run_predictions(
         ohlcv_data,

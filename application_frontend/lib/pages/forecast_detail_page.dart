@@ -60,7 +60,7 @@ class ForecastDetailPage extends StatelessWidget { // class for next-5 predicted
             padding: const EdgeInsets.all(20),
             children: [
               Text(
-                'Next 5 predicted closes',
+                'Next ${preds.isEmpty ? 5 : preds.length} predicted closes',
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: 12),
@@ -83,7 +83,7 @@ class ForecastDetailPage extends StatelessWidget { // class for next-5 predicted
                       ),
                 ) // empty forecasts
               else
-                ...List.generate(preds.take(5).length, (index) {
+                ...List.generate(preds.length, (index) {
                   final point = preds[index]; // one forecast day
                   final prior = index == 0
                       ? lastClose
@@ -103,7 +103,7 @@ class ForecastDetailPage extends StatelessWidget { // class for next-5 predicted
                     'down' => Icons.trending_down,
                     _ => Icons.trending_flat,
                   }; // direction icon
-                  final dayLabel = 'Day ${index + 1}'; // Day 1..5
+                  final dayLabel = 'Day ${index + 1}'; // Day 1..N
                   final price = '\$${point.predictedClose.toStringAsFixed(2)}'; // formatted
                   return Card(
                     margin: const EdgeInsets.only(bottom: 10),

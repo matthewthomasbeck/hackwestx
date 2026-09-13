@@ -144,16 +144,21 @@ def get_market(): # function to serve cached SOL real (+ predictions) JSON to Fl
 
     cached = frontend_delivery.get_cached_frontend_payload() # in-memory snapshot
     if cached is not None: # cache hit
-        return jsonify(cached), 200 # serve cached market JSON
+        pred_series = ((cached.get("predictions") or {}) or {}).get("series") or [] # forecast list
+        # Rebuild from Tiger when a ready snapshot is short of the 5-day horizon
+        if not (cached.get("status") == "ready" and 0 < len(pred_series) < 5):
+            return jsonify(cached), 200 # serve cached market JSON
 
     try:
-        bundle = tiger_db.read_market_bundle() # fall back to Tiger
-        payload = _payload_from_tiger_bundle(bundle) # empty | pending | ready
+        bundle = tiger_db.read_market_bundle(forecast_days=5) # next-5 forward forecasts
+        payload = _payload_from_tiger_bundle(bundle, forecast_days=5) # empty | pending | ready
         if payload.get("status") != "empty": # warm cache when Tiger has data
             frontend_delivery.send_to_frontend(payload) # so later GETs skip DB
         return jsonify(payload), 200 # serve Tiger-derived snapshot
     except Exception as e: # Tiger miss / not configured
         logger.info("No cached payload and Tiger fallback failed: %s", e) # log miss
+        if cached is not None: # prefer stale cache over empty on Tiger miss
+            return jsonify(cached), 200 # last-known snapshot
         return jsonify(_empty_market_payload()), 200 # empty snapshot until refresh
 
 

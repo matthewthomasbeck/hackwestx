@@ -361,18 +361,31 @@ def read_market_bundle(forecast_days=None): # function to compose real OHLCV + f
 
     logger.info("Building market bundle (forecast_days=%s)", forecast_days) # log compose
     real = read_ohlcv() # full real series
-    predictions = read_predictions() # full forecast series
+    predictions = read_predictions() # full forecast series (may include older runs)
+    series = list(predictions.get("series") or []) # chronological forecast points
 
-    if forecast_days is not None and predictions.get("series"): # optional horizon trim
-        predictions = {
-            "asset": predictions.get("asset", "SOL"),
-            "series": predictions["series"][: int(forecast_days)],
-        } # keep first N forecasts
+    # Cap at predictor max (5); default to 5 so Flutter always gets a full horizon
+    if forecast_days is None: # no explicit horizon
+        horizon = 5 # default next-5 view
+    else:
+        horizon = max(1, min(int(forecast_days), 5)) # clamp 1..5
+
+    real_series = (real or {}).get("series") or [] # OHLCV points
+    if real_series and series: # prefer true forward forecasts after last real bar
+        last_real = real_series[-1]["time"] # latest candle timestamp (ISO)
+        forward = [p for p in series if p["time"] > last_real] # future-only
+        series = forward if forward else series[-horizon:] # fall back to newest N
+
+    if series: # trim to requested horizon (next days, not oldest history)
+        series = series[:horizon] # first N forward / newest window
 
     return {
         "real": real,
-        "predictions": predictions,
-        "forecast_days": forecast_days,
+        "predictions": {
+            "asset": predictions.get("asset", "SOL"),
+            "series": series,
+        },
+        "forecast_days": horizon,
     } # combined bundle
 
 
