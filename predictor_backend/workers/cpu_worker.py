@@ -64,25 +64,54 @@ class CPUWorker: # class for CPU-side helper worker (preprocess/postprocess expa
         shutdown_event: threading.Event,
     ): # function to store worker id, queue handle, and shared shutdown event
 
-        pass # skeleton: store args; init lock + tasks_processed/failed/is_running stats
+        self.worker_id = worker_id # unique worker name
+        self.queue_manager = queue_manager # shared queue (future preprocess use)
+        self.shutdown_event = shutdown_event # cooperative stop signal
+        self._lock = threading.Lock() # protect stats dict
+        self._stats = {
+            "tasks_processed": 0,
+            "tasks_failed": 0,
+            "is_running": False
+        } # zeroed counters
+        logger.info(f"CPU worker {worker_id} initialized") # log init
 
 
     ########## RUN ##########
 
     def run(self) -> None: # function to idle-loop until shutdown (placeholder for CPU preprocess work)
 
-        pass # skeleton: while not shutdown_event: wait(timeout); update is_running stats
+        logger.info(f"CPU worker {self.worker_id} started") # log start
+
+        with self._lock:
+            self._stats["is_running"] = True # mark running
+
+        try:
+            while not self.shutdown_event.is_set(): # idle until stop
+                if self.shutdown_event.wait(timeout=1.0): # wake on shutdown or timeout
+                    break
+
+        except Exception as e:
+            logger.error(f"CPU worker {self.worker_id} crashed: {e}", exc_info=True)
+
+        finally:
+            with self._lock:
+                self._stats["is_running"] = False # clear running
+            logger.info(f"CPU worker {self.worker_id} stopped")
 
 
     ########## CLEANUP ##########
 
     def cleanup(self) -> None: # function to release CPU worker resources on shutdown
 
-        pass # skeleton: no-op cleanup for CPU workers
+        logger.debug(f"Cleaning up CPU worker {self.worker_id}") # no-op cleanup for CPU workers
 
 
     ########## GET STATS ##########
 
     def get_stats(self) -> dict: # function to return this worker's processed/failed/running counters
 
-        pass # skeleton: return worker_id + stats under lock
+        with self._lock:
+            return {
+                "worker_id": self.worker_id,
+                **self._stats
+            } # snapshot under lock

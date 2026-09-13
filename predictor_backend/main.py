@@ -30,6 +30,7 @@ import sys # import sys for optional hard-exit on startup failure
 
 from dotenv import load_dotenv # import dotenv to load .env into process env
 from flask import Flask # import Flask application factory type
+import torch # import torch for CUDA cache cleanup on shutdown
 
 ##### import local modules #####
 
@@ -50,6 +51,22 @@ load_dotenv() # load predictor_backend/.env values
 
 
 ##################################################
+############### MODULE STATE #####################
+##################################################
+
+
+########## LIFECYCLE REFS ##########
+
+queue_manager = None # set by create_app(); used by shutdown_handler
+model_manager = None # set by create_app(); used by shutdown_handler
+worker_manager = None # set by create_app(); used by shutdown_handler
+logger = logging.getLogger("prediction_service") # module logger for lifecycle messages
+
+
+
+
+
+##################################################
 ############### FLASK APPLICATION ################
 ##################################################
 
@@ -58,7 +75,24 @@ load_dotenv() # load predictor_backend/.env values
 
 def create_app(): # function to build Flask app, init queue/model/workers, register blueprints
 
-    pass # skeleton: Flask() + QueueManager/ModelManager/WorkerManager on app + api/health blueprints
+    global queue_manager, model_manager, worker_manager # expose for shutdown_handler
+
+    app = Flask(__name__) # create Flask application
+
+    logger.info("Initializing components...")
+    queue_manager = QueueManager() # prediction task queue
+    model_manager = ModelManager() # LSTM load/device manager
+    worker_manager = WorkerManager(queue_manager, model_manager) # GPU/CPU worker pool
+
+    app.queue_manager = queue_manager # attach for routes/health
+    app.model_manager = model_manager
+    app.worker_manager = worker_manager
+
+    app.register_blueprint(api_bp, url_prefix="/api/v1") # predict + task status
+    app.register_blueprint(health_bp) # /health + /status
+    health_bp.app = app # stash-compatible health app ref
+
+    return app
 
 
 
@@ -73,14 +107,41 @@ def create_app(): # function to build Flask app, init queue/model/workers, regis
 
 def shutdown_handler(signum=None, frame=None): # function to gracefully stop workers and clear CUDA on exit
 
-    pass # skeleton: worker_manager.shutdown(); optional torch.cuda.empty_cache(); exit
+    logger.info("Shutdown signal received, initiating graceful shutdown...")
+
+    if worker_manager is not None:
+        worker_manager.shutdown() # stop workers + queue
+
+    if model_manager is not None and getattr(model_manager, "model", None) is not None:
+        logger.info("Cleaning up model...")
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache() # free GPU memory
+
+    logger.info("Shutdown complete")
+    sys.exit(0)
 
 
 ########## STARTUP ##########
 
 def startup(app): # function to load LSTM weights and start GPU/CPU worker threads
 
-    pass # skeleton: model_manager.load_model(); worker_manager.start()
+    logger.info("Starting up prediction service...")
+
+    try:
+        app.model_manager.load_model() # load LSTM onto device
+        logger.info("Model loaded successfully")
+    except Exception as e:
+        logger.error(f"Failed to load model: {e}", exc_info=True)
+        raise
+
+    try:
+        app.worker_manager.start() # spawn GPU/CPU threads
+        logger.info("Workers started successfully")
+    except Exception as e:
+        logger.error(f"Failed to start workers: {e}", exc_info=True)
+        raise
+
+    logger.info("Prediction service started successfully")
 
 
 
@@ -95,7 +156,38 @@ def startup(app): # function to load LSTM weights and start GPU/CPU worker threa
 
 def main(): # function to setup logging, validate config, create app, startup, then serve Flask
 
-    pass # skeleton: setup_logging(); config.validate(); create_app(); startup(); app.run(HOST, PORT)
+    setup_logging() # configure logging handlers
+
+    try:
+        config.validate() # fail fast on bad config
+    except ValueError as e:
+        logger.error(f"Configuration error: {e}")
+        sys.exit(1)
+
+    app = create_app() # build Flask app + managers
+
+    signal.signal(signal.SIGINT, shutdown_handler) # Ctrl-C
+    signal.signal(signal.SIGTERM, shutdown_handler) # terminate
+    atexit.register(shutdown_handler) # process exit
+
+    try:
+        startup(app) # load model + start workers
+    except Exception as e:
+        logger.error(f"Failed to start service: {e}")
+        sys.exit(1)
+
+    try:
+        logger.info(f"Starting Flask server on {config.HOST}:{config.PORT}")
+        app.run(
+            host=config.HOST,
+            port=config.PORT,
+            debug=False,
+            threaded=True
+        )
+    except KeyboardInterrupt:
+        logger.info("Keyboard interrupt received")
+    finally:
+        shutdown_handler()
 
 
 ##### run when executed directly #####

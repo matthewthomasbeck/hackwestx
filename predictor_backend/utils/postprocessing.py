@@ -59,7 +59,23 @@ def process_model_outputs(
     scaler: MinMaxScaler,
 ) -> np.ndarray: # function to move preds to CPU numpy and inverse MinMax scale
 
-    pass # skeleton: tensor→numpy flatten → scaler.inverse_transform
+    ##### move to CPU and convert to numpy #####
+
+    if isinstance(predictions, torch.Tensor): # handle torch tensors
+        predictions_np = predictions.cpu().numpy() # detach to host numpy
+    else: # already array-like
+        predictions_np = np.array(predictions) # coerce to ndarray
+
+    ##### flatten if needed #####
+
+    if predictions_np.ndim > 1: # collapse batch/feature dims
+        predictions_np = predictions_np.flatten() # 1D prediction vector
+
+    ##### denormalize #####
+
+    denormalized = scaler.inverse_transform(predictions_np.reshape(-1, 1)).flatten() # inverse MinMax
+
+    return denormalized # original-scale predictions
 
 
 ########## GENERATE FITTED PREDICTIONS ##########
@@ -71,7 +87,21 @@ def generate_fitted_predictions(
     scaler: MinMaxScaler,
 ) -> np.ndarray: # function to run model over all historical sequences and denormalize
 
-    pass # skeleton: eval loop over sequences; collect preds; inverse_transform
+    model.eval() # inference mode
+    fitted_preds = [] # collect per-window preds
+
+    with torch.no_grad(): # no grad for fitted pass
+        for seq in sequences: # one historical window at a time
+            seq_tensor = torch.FloatTensor(seq).unsqueeze(0).to(device) # add batch dim on device
+            pred = model(seq_tensor) # forward pass
+            fitted_preds.append(pred.cpu().numpy().flatten()[0]) # first scalar pred
+
+    ##### denormalize #####
+
+    fitted_array = np.array(fitted_preds) # stack fitted values
+    denormalized = scaler.inverse_transform(fitted_array.reshape(-1, 1)).flatten() # inverse MinMax
+
+    return denormalized # historical fitted predictions
 
 
 ########## COMBINE PREDICTIONS ##########
@@ -81,4 +111,4 @@ def combine_predictions(
     future_predictions: np.ndarray,
 ) -> np.ndarray: # function to concatenate fitted historical and future prediction arrays
 
-    pass # skeleton: np.concatenate([fitted, future])
+    return np.concatenate([fitted_predictions, future_predictions]) # fitted then future

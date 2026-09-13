@@ -103,7 +103,12 @@ class Config: # class to hold prediction service settings from environment
     @classmethod
     def validate(cls): # function to ensure required env and worker counts are sane
 
-        pass # skeleton: require PREDICTION_SERVICE_KEY; NUM_GPU/CPU_WORKERS >= 1
+        if not cls.PREDICTION_SERVICE_KEY: # require interim shared secret for API auth
+            raise ValueError("PREDICTION_SERVICE_KEY must be set in environment variables") # fail fast when missing
+        if cls.NUM_GPU_WORKERS < 1: # need at least one GPU worker slot
+            raise ValueError("NUM_GPU_WORKERS must be at least 1") # reject invalid worker count
+        if cls.NUM_CPU_WORKERS < 1: # need at least one CPU worker slot
+            raise ValueError("NUM_CPU_WORKERS must be at least 1") # reject invalid worker count
 
 
 ##### global config instance #####

@@ -51,14 +51,30 @@ logger = logging.getLogger("prediction_service") # create module logger
 
 def validate_json_structure(data: Dict[str, Any]) -> None: # function to require timeSeries/xAxis/yAxis and valid numPredictions
 
-    pass # skeleton: raise ValueError if required fields missing or numPredictions not in 1..3
+    required_fields = ["timeSeries", "xAxis", "yAxis"] # mandatory top-level keys
+    for field in required_fields: # check each required field
+        if field not in data: # missing key
+            raise ValueError(f"Missing required field: {field}") # fail validation
+
+    if not isinstance(data["timeSeries"], list): # timeSeries must be a list
+        raise ValueError("timeSeries must be a list") # reject bad type
+
+    if len(data["timeSeries"]) == 0: # need at least one series
+        raise ValueError("timeSeries cannot be empty") # reject empty payload
+
+    ##### validate numPredictions if present #####
+
+    if "numPredictions" in data: # optional but constrained when set
+        num_preds = data["numPredictions"] # requested future steps
+        if not isinstance(num_preds, int) or num_preds < 1 or num_preds > 3: # must be 1..3
+            raise ValueError("numPredictions must be an integer between 1 and 3") # reject bad value
 
 
 ########## EXTRACT SERIES FROM JSON ##########
 
 def extract_series_from_json(data: Dict[str, Any]) -> List[Dict[str, Any]]: # function to return the timeSeries list from inbound JSON
 
-    pass # skeleton: return data.get("timeSeries", [])
+    return data.get("timeSeries", []) # return series list or empty
 
 
 ########## FORMAT PREDICTIONS FOR JSON ##########
@@ -71,7 +87,24 @@ def format_predictions_for_json(
     future_predictions: List[float],
 ) -> Dict[str, Any]: # function to build one {name, data:[{x,y}]} series from fitted + future points
 
-    pass # skeleton: zip historical fitted + future preds into timeSeries-shaped dict
+    ##### combine historical fitted predictions #####
+
+    historical_data = [
+        {"x": time, "y": float(pred)}
+        for time, pred in zip(times, fitted_predictions)
+    ] # zip historical x with fitted y
+
+    ##### add future predictions #####
+
+    future_data = [
+        {"x": time, "y": float(pred)}
+        for time, pred in zip(future_times, future_predictions)
+    ] # zip future x with future y
+
+    return {
+        "name": series_name,
+        "data": historical_data + future_data
+    } # timeSeries-shaped prediction series
 
 
 ########## INJECT PREDICTIONS INTO JSON ##########
@@ -82,7 +115,24 @@ def inject_predictions_into_json(
     num_predictions: int,
 ) -> Dict[str, Any]: # function to copy payload, drop callback_url, set hasPredictions + predictions[]
 
-    pass # skeleton: shallow copy; strip callback_url; set metadata and predictions list
+    ##### create a copy to avoid modifying original #####
+
+    result = original_json.copy() # shallow copy of inbound payload
+
+    ##### remove internal fields that shouldn't be in the response #####
+
+    result.pop('callback_url', None) # strip callback URL from client response
+
+    ##### update metadata #####
+
+    result["hasPredictions"] = "True" # mark predictions present
+    result["numPredictions"] = num_predictions # echo steps predicted
+
+    ##### add predictions array #####
+
+    result["predictions"] = predictions # attach per-series prediction objects
+
+    return result # enriched response dict
 
 
 ########## PREPARE RESPONSE JSON ##########
@@ -93,4 +143,5 @@ def prepare_response_json(
     num_predictions: int,
 ) -> str: # function to serialize injected prediction JSON as an indented string
 
-    pass # skeleton: inject_predictions_into_json then json.dumps(indent=2)
+    result = inject_predictions_into_json(original_json, predictions, num_predictions) # inject then dump
+    return json.dumps(result, indent=2) # indented JSON string
