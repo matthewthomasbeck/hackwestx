@@ -54,5 +54,5 @@ THINGS DONE:
 10. completed prediction pipeline on desktop
 11. completed base implementation of application backend
 12. successfully started both backend systems (but yet to pressure test)
-
+13. application backend successfully downloads latest SOL timeseries data and stores it in timeseries optimized Tiger DB
 
