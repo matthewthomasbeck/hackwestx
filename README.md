@@ -25,6 +25,21 @@ Application Frontend Components:
 * must have logging screen
 * must take and display JSON data from backend
 
+Application Frontend Ideas:
+* want theme to be pruple + blue + green with dark/light mode and a slight glow and gradients
+* want to use simple font and icons whose colors I can ideally manipulate
+* loading page with simple solana logo in the center
+* login page with
+* home page with
+* buy sol page with
+* sol forecast in detail page with
+* paper portfolio page with
+* trade confirm/receipt page with
+* trade history page with
+* account settings page with
+* empty/pending/error pages with
+* onboarding page with
+
 Application Backend Components:
 * needs to use auth0 for login
 * needs to use EC2 and not Google Cloud for Tailscale compatibility
