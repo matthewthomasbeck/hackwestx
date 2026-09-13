@@ -51,7 +51,7 @@ class ApiService { // class to call application_backend market / identity endpoi
 
   final http.Client _client; // shared HTTP client
   final String baseUrl; // EC2 application_backend origin
-  String? accessToken; // Auth0 Bearer token from login (stubbed until Auth0 wired)
+  String? accessToken; // Auth0 Bearer token from login
 
   static const _timeout = Duration(seconds: 15); // request timeout
 

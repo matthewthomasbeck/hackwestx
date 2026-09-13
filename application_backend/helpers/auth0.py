@@ -25,13 +25,15 @@ import logging # import logging for Auth0 helper messages
 import os # import os for Auth0 env vars
 import time # import time for M2M token expiry cache
 from functools import wraps # import wraps to preserve Flask view metadata
-from typing import Any, Callable, Dict, Optional # import typing helpers
+from typing import Any, Dict, Optional # import typing helpers
 
 ##### import third-party libraries #####
 
-import requests # import requests for JWKS and token endpoint calls
+import jwt # import PyJWT for RS256 access-token verification
+import requests # import requests for M2M token endpoint calls
 from dotenv import load_dotenv # import dotenv to load .env
 from flask import jsonify, request # import Flask helpers used by require_auth
+from jwt import PyJWKClient # import PyJWKClient for Auth0 JWKS key lookup
 
 ##### load environment #####
 
@@ -54,6 +56,9 @@ logger = logging.getLogger(__name__) # create module logger
 
 _m2m_token: Optional[str] = None # cached Auth0 M2M access token for predictor calls
 _m2m_token_expires_at: float = 0.0 # unix expiry time for cached M2M token
+_jwks_client: Optional[PyJWKClient] = None # cached PyJWKClient for user JWT verification
+_jwks_client_domain: Optional[str] = None # domain the cached client was built for
+_JWKS_TTL_SECONDS = 3600 # refresh JWKS client hourly
 
 
 
@@ -68,20 +73,63 @@ _m2m_token_expires_at: float = 0.0 # unix expiry time for cached M2M token
 
 def _auth0_domain(): # function to read and normalize AUTH0_DOMAIN from environment
 
-    domain = os.getenv("AUTH0_DOMAIN", "").rstrip("/") # strip trailing slash
+    domain = (os.getenv("AUTH0_DOMAIN") or "").strip().rstrip("/") # strip whitespace / slash
+    if domain.startswith("https://"): # allow full issuer-style values
+        domain = domain[len("https://"):] # keep host only
+    if domain.startswith("http://"): # allow http form
+        domain = domain[len("http://"):] # keep host only
     if not domain: # domain required for JWKS / token URL
         raise ValueError("AUTH0_DOMAIN is not set") # fail fast
     return domain # normalized tenant domain
 
 
-########## GET JWKS ##########
+########## AUTH0 USER AUDIENCE ##########
 
-def get_jwks(): # function to fetch Auth0 JWKS used to verify Flutter user JWTs
+def _auth0_user_audience(): # function to read Flutter user API audience
+
+    audience = (os.getenv("AUTH0_AUDIENCE") or "").strip() # expected aud claim
+    if not audience: # audience required
+        raise ValueError("AUTH0_AUDIENCE is not set") # fail fast
+    return audience # e.g. https://hackwestx.user.auth
+
+
+########## AUTH0 ISSUER ##########
+
+def _auth0_issuer(): # function to read expected JWT issuer (defaults to https://{domain}/)
+
+    issuer = (os.getenv("AUTH0_ISSUER") or "").strip() # optional explicit issuer
+    if issuer: # configured
+        return issuer if issuer.endswith("/") else f"{issuer}/" # Auth0 issuer has trailing slash
+    return f"https://{_auth0_domain()}/" # standard Auth0 issuer
+
+
+########## GET JWKS CLIENT ##########
+
+def get_jwks_client(force_refresh=False): # function to return a cached PyJWKClient for Auth0 JWKS
+
+    global _jwks_client, _jwks_client_domain # mutate module cache
 
     domain = _auth0_domain() # Auth0 tenant host
-    url = f"https://{domain}/.well-known/jwks.json" # JWKS endpoint
-    logger.debug("Fetching JWKS from %s", url) # log fetch
-    # TODO: cache JWKS with TTL
+    if (
+        force_refresh
+        or _jwks_client is None
+        or _jwks_client_domain != domain
+    ): # rebuild client when missing / domain changed
+        jwks_url = f"https://{domain}/.well-known/jwks.json" # JWKS endpoint
+        logger.info("Creating Auth0 JWKS client for %s", jwks_url) # log once per rebuild
+        _jwks_client = PyJWKClient(jwks_url, cache_keys=True, lifespan=_JWKS_TTL_SECONDS) # cached keys
+        _jwks_client_domain = domain # remember domain
+
+    return _jwks_client # ready client
+
+
+########## GET JWKS ##########
+
+def get_jwks(force_refresh=False): # function to fetch Auth0 JWKS used to verify Flutter user JWTs
+
+    client = get_jwks_client(force_refresh=force_refresh) # ensure client exists
+    domain = _auth0_domain() # tenant
+    url = f"https://{domain}/.well-known/jwks.json" # JWKS URL
     response = requests.get(url, timeout=10) # GET public keys
     response.raise_for_status() # raise on HTTP error
     return response.json() # JWKS document
@@ -91,28 +139,33 @@ def get_jwks(): # function to fetch Auth0 JWKS used to verify Flutter user JWTs
 
 def validate_user_token(token): # function to validate Flutter Bearer token and return JWT claims
 
-    audience = os.getenv("AUTH0_AUDIENCE") # expected JWT audience
-    issuer = os.getenv("AUTH0_ISSUER") or f"https://{_auth0_domain()}/" # expected issuer
+    if not token: # empty bearer
+        raise ValueError("Missing access token") # reject
 
-    if not audience: # audience required
-        raise ValueError("AUTH0_AUDIENCE is not set") # fail fast
+    audience = _auth0_user_audience() # Flutter API audience
+    issuer = _auth0_issuer() # expected iss
+    client = get_jwks_client() # JWKS-backed key client
 
-    # TODO: verify RS256 signature via JWKS, check iss/aud/exp
-    # Example (once PyJWT + cryptography are wired):
-    #   jwks = get_jwks()
-    #   return jwt.decode(token, key=..., audience=audience, issuer=issuer, algorithms=["RS256"])
-    logger.warning(
-        "validate_user_token() is a skeleton — returning unverified stub claims "
-        "(audience=%s issuer=%s token_prefix=%s...)",
-        audience,
-        issuer,
-        token[:12] if token else "",
-    ) # warn until real JWT verify is wired
-    return {
-        "sub": "skeleton|unimplemented",
-        "aud": audience,
-        "iss": issuer,
-    } # unverified stub claims for local wiring
+    try:
+        signing_key = client.get_signing_key_from_jwt(token) # match kid → public key
+        claims = jwt.decode(
+            token,
+            signing_key.key,
+            algorithms=["RS256"],
+            audience=audience,
+            issuer=issuer,
+            options={"require": ["exp", "iat", "sub"]},
+        ) # verified claims
+    except jwt.PyJWTError as exc: # signature / aud / iss / exp failures
+        logger.warning("User JWT validation failed: %s", exc) # no token logged
+        raise ValueError(f"Invalid access token: {exc}") from exc # surface to decorator
+
+    logger.debug(
+        "User token accepted (sub=%s aud=%s)",
+        claims.get("sub"),
+        claims.get("aud"),
+    ) # success without dumping token
+    return claims # verified claims for request context
 
 
 ########## REQUIRE AUTH ##########
@@ -131,7 +184,7 @@ def require_auth(f): # decorator to require Authorization Bearer user token on F
 
         token = auth_header.removeprefix("Bearer ").strip() # extract access token
         try:
-            claims = validate_user_token(token) # validate (or stub) user JWT
+            claims = validate_user_token(token) # verify RS256 JWT via Auth0 JWKS
         except Exception as e: # validation failure
             logger.warning("User token validation failed: %s", e) # log reason
             return jsonify({
