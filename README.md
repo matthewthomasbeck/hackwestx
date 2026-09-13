@@ -73,5 +73,7 @@ THINGS DONE:
 14. predictor backend successfully authenticating with auth0 so random people can't call my GPU
 15. appliaction backend to predictor backend to application backend pipeline complete with complete tiger cloud and auth0 predictor integration
 16. application frontend basic skeleton with all pages from notebook implemented
+17. application frontend now uses auth0 for user authentication
+
 
 
