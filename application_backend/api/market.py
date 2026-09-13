@@ -83,7 +83,7 @@ def _payload_from_tiger_bundle(bundle, forecast_days=None): # function to map Ti
     predictions = bundle.get("predictions") or {"asset": "SOL", "series": []} # forecast blob
     real_series = real.get("series") or [] # candle list
     pred_series = predictions.get("series") or [] # forecast list
-    horizon = forecast_days or bundle.get("forecast_days") or 3 # default 3-day view
+    horizon = forecast_days or bundle.get("forecast_days") or 5 # default 5-day view
 
     if not real_series: # nothing in Tiger yet
         return _empty_market_payload("Tiger sol_ohlcv is empty; trigger /api/v1/market/refresh") # empty
@@ -207,7 +207,7 @@ def solana_prediction_callback(): # function to receive completed predictions fr
 
     # Best-effort persist + push ready JSON so Flutter polls see predictions immediately
     try:
-        num_predictions = int(payload.get("numPredictions") or 3) # horizon from callback
+        num_predictions = int(payload.get("numPredictions") or 5) # horizon from callback
         rows = prediction_client.callback_to_prediction_rows(
             payload,
             num_predictions=num_predictions,

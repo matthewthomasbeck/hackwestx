@@ -67,7 +67,7 @@ def create_trained_model(
     epochs: int = 80,
     batch_size: int = 8,
     sequence_length: int = None,
-) -> LSTMPredictor: # function to train a fresh LSTM on sequences with Adam/MSE
+) -> LSTMPredictor: # function to train a fresh BiGRU-attention model on sequences with AdamW/MSE
 
     logger.info(f"Creating and training model... (epochs={epochs}, batch_size={batch_size})") # log train start
 
@@ -81,17 +81,17 @@ def create_trained_model(
     trainX_tensor = torch.FloatTensor(trainX).to(device) # sequences on device
     trainY_tensor = torch.FloatTensor(trainY).unsqueeze(1).to(device) # targets with feature dim
 
-    ##### create model matching TensorFlow architecture #####
+    ##### create BiGRU + attention model #####
 
     model = LSTMPredictor(
         input_size=trainX.shape[2] if len(trainX.shape) > 2 else 1,
         sequence_length=sequence_length
-    ) # fresh LSTM for this step
+    ) # fresh BiGRU-attention model for this step
     model.to(device) # move to GPU/CPU
 
-    ##### use Adam optimizer and MSE loss (matching TensorFlow) #####
+    ##### use AdamW + MSE (weight decay helps the deeper stack) #####
 
-    optimizer = optim.Adam(model.parameters()) # Adam
+    optimizer = optim.AdamW(model.parameters(), lr=1e-3, weight_decay=1e-4) # AdamW
     criterion = nn.MSELoss() # MSE
 
     ##### training loop #####
@@ -145,7 +145,7 @@ def create_trained_model(
 def prepare_data_with_step(
     data: np.ndarray,
     step: int,
-    sequence_length: int = 7,
+    sequence_length: int = 14,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]: # function to build trainX/trainY/lastSequence shifted by future step
 
     if len(data) < sequence_length + step: # need window + future target

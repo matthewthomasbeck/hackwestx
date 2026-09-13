@@ -71,7 +71,7 @@ class AppRoutes { // class to hold named route strings and MaterialApp route map
       onboarding: (_) => const OnboardingPage(), // swipeable intro cards
       home: (_) => const HomePage(), // SOL chart + quick actions
       buySol: (_) => const BuySolPage(), // amount + review buy
-      forecastDetail: (_) => const ForecastDetailPage(), // next 3 predicted closes
+      forecastDetail: (_) => const ForecastDetailPage(), // next 5 predicted closes
       portfolio: (_) => const PortfolioPage(), // cash / holdings / P&L
       tradeConfirm: (_) => const TradeConfirmPage(), // confirm then receipt
       tradeHistory: (_) => const TradeHistoryPage(), // past paper trades

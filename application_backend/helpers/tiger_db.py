@@ -275,7 +275,7 @@ def read_ohlcv(start=None, end=None): # function to read real SOL prices from so
 
 ########## UPSERT PREDICTIONS ##########
 
-def upsert_predictions(rows, model_version="lstm-v1"): # function to write predictor output into sol_predictions
+def upsert_predictions(rows, model_version="bigru-attn-v1"): # function to write predictor output into sol_predictions
 
     if not rows: # nothing to write
         logger.info("No prediction rows to upsert") # skip
@@ -405,7 +405,7 @@ def ensure_schema(): # function to create sol_ohlcv / sol_predictions hypertable
         CREATE TABLE IF NOT EXISTS sol_predictions (
           time             TIMESTAMPTZ       NOT NULL,
           predicted_close  DOUBLE PRECISION  NOT NULL,
-          model_version    TEXT              NOT NULL DEFAULT 'lstm-v1',
+          model_version    TEXT              NOT NULL DEFAULT 'bigru-attn-v1',
           created_at       TIMESTAMPTZ       NOT NULL DEFAULT NOW(),
           PRIMARY KEY (time)
         );

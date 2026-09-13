@@ -65,9 +65,13 @@ def validate_json_structure(data: Dict[str, Any]) -> None: # function to require
     ##### validate numPredictions if present #####
 
     if "numPredictions" in data: # optional but constrained when set
+        import config # local import to avoid circulars at module load
+        max_preds = config.config.MAX_PREDICTIONS # hard cap from config
         num_preds = data["numPredictions"] # requested future steps
-        if not isinstance(num_preds, int) or num_preds < 1 or num_preds > 3: # must be 1..3
-            raise ValueError("numPredictions must be an integer between 1 and 3") # reject bad value
+        if not isinstance(num_preds, int) or num_preds < 1 or num_preds > max_preds: # must be 1..MAX
+            raise ValueError(
+                f"numPredictions must be an integer between 1 and {max_preds}"
+            ) # reject bad value
 
 
 ########## EXTRACT SERIES FROM JSON ##########

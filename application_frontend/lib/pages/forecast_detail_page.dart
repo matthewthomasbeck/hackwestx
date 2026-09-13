@@ -36,7 +36,7 @@ import '../theme/app_theme.dart'; // import brand / direction colors
 
 /*########## FORECAST DETAIL PAGE ##########*/
 
-class ForecastDetailPage extends StatelessWidget { // class for next-3 predicted closes + model blurb
+class ForecastDetailPage extends StatelessWidget { // class for next-5 predicted closes + model blurb
 
   const ForecastDetailPage({super.key}); // default const constructor
 
@@ -51,7 +51,7 @@ class ForecastDetailPage extends StatelessWidget { // class for next-3 predicted
         final market = marketStore.market; // current snapshot
         final preds = market?.predictions ?? const []; // forecast series
         final lastClose = marketStore.lastClose; // baseline for up/down
-        final model = preds.isNotEmpty ? (preds.first.modelVersion ?? 'lstm-v1') : '—'; // model tag
+        final model = preds.isNotEmpty ? (preds.first.modelVersion ?? 'bigru-attn-v1') : '—'; // model tag
         final generated = market?.updatedAt?.toLocal().toString() ?? '—'; // generated stamp
 
         return Scaffold(
@@ -60,7 +60,7 @@ class ForecastDetailPage extends StatelessWidget { // class for next-3 predicted
             padding: const EdgeInsets.all(20),
             children: [
               Text(
-                'Next 3 predicted closes',
+                'Next 5 predicted closes',
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: 12),
@@ -83,7 +83,7 @@ class ForecastDetailPage extends StatelessWidget { // class for next-3 predicted
                       ),
                 ) // empty forecasts
               else
-                ...List.generate(preds.take(3).length, (index) {
+                ...List.generate(preds.take(5).length, (index) {
                   final point = preds[index]; // one forecast day
                   final prior = index == 0
                       ? lastClose
@@ -103,7 +103,7 @@ class ForecastDetailPage extends StatelessWidget { // class for next-3 predicted
                     'down' => Icons.trending_down,
                     _ => Icons.trending_flat,
                   }; // direction icon
-                  final dayLabel = 'Day ${index + 1}'; // Day 1..3
+                  final dayLabel = 'Day ${index + 1}'; // Day 1..5
                   final price = '\$${point.predictedClose.toStringAsFixed(2)}'; // formatted
                   return Card(
                     margin: const EdgeInsets.only(bottom: 10),

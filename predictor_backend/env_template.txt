@@ -17,6 +17,9 @@ BATCH_SIZE=32
 
 # Model Configuration
 MODEL_PATH=./models/lstm_model.pth
+SEQUENCE_LENGTH=14
+TRAINING_EPOCHS=100
+TRAINING_BATCH_SIZE=16
 
 # Queue Configuration (if using Redis)
 REDIS_URL=redis://localhost:6379/0

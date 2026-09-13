@@ -83,19 +83,20 @@ class Config: # class to hold prediction service settings from environment
     HOST: str = os.getenv("HOST", "0.0.0.0") # Flask bind host
     PORT: int = int(os.getenv("PORT", "8000")) # Flask bind port
 
-    ##### Model Architecture (matching TensorFlow version) #####
+    ##### Model Architecture (BiGRU + temporal attention) #####
 
-    LSTM_HIDDEN_SIZE_1: int = 60 # first LSTM hidden size
-    LSTM_HIDDEN_SIZE_2: int = 120 # second LSTM hidden size
-    DROPOUT_RATE: float = 0.3 # dropout between LSTM / dense stages
-    DENSE_SIZE: int = 20 # penultimate dense layer width
-    SEQUENCE_LENGTH: int = int(os.getenv("SEQUENCE_LENGTH", "7")) # lookback window length
-    MAX_PREDICTIONS: int = 3 # hard cap on future steps per request
+    GRU_HIDDEN_SIZE: int = 96 # unidirectional GRU hidden size (×2 when bidirectional)
+    GRU_NUM_LAYERS: int = 2 # stacked BiGRU depth
+    DROPOUT_RATE: float = 0.25 # dropout between GRU / dense stages
+    DENSE_SIZE: int = 64 # penultimate dense layer width
+    SEQUENCE_LENGTH: int = int(os.getenv("SEQUENCE_LENGTH", "14")) # lookback window length
+    MAX_PREDICTIONS: int = 5 # hard cap on future steps per request
+    MODEL_VERSION: str = "bigru-attn-v1" # version tag written into prediction rows
 
     ##### Training Configuration #####
 
-    TRAINING_EPOCHS: int = int(os.getenv("TRAINING_EPOCHS", "80")) # epochs per per-step train
-    TRAINING_BATCH_SIZE: int = int(os.getenv("TRAINING_BATCH_SIZE", "8")) # Adam training batch size
+    TRAINING_EPOCHS: int = int(os.getenv("TRAINING_EPOCHS", "100")) # epochs per per-step train
+    TRAINING_BATCH_SIZE: int = int(os.getenv("TRAINING_BATCH_SIZE", "16")) # Adam training batch size
 
 
     ########## VALIDATE ##########

@@ -99,15 +99,17 @@ class TaskHandler: # class to run LSTM prediction jobs and POST callback results
 
             validate_json_structure(task.json_data) # reject malformed inbound JSON
 
+            max_preds = config.config.MAX_PREDICTIONS # hard cap from config
             num_predictions = min(
-                task.json_data.get("numPredictions", 3),
-                3
-            ) # cap future steps at 3
+                task.json_data.get("numPredictions", max_preds),
+                max_preds
+            ) # cap future steps at MAX_PREDICTIONS
 
             series_list = extract_series_from_json(task.json_data) # pull timeSeries entries
             date_format = task.json_data["xAxis"]["format"] # x-axis date format for future labels
 
-            MIN_DATA_POINTS = 8 # sequence_length (7) + 1 minimum
+            sequence_length = config.config.SEQUENCE_LENGTH # window size from config
+            MIN_DATA_POINTS = sequence_length + num_predictions # need lookback + farthest horizon
             predictions_dict = {} # map series name → prediction payload
             skipped_series = [] # names skipped for insufficient data or errors
 
@@ -130,8 +132,7 @@ class TaskHandler: # class to run LSTM prediction jobs and POST callback results
 
                     normalized_values, scaler = normalize_data(values) # fit MinMaxScaler
 
-                    sequence_length = config.config.SEQUENCE_LENGTH # window size from config
-                    future_steps = list(range(1, num_predictions + 1)) # e.g. [1, 2, 3]
+                    future_steps = list(range(1, num_predictions + 1)) # e.g. [1, 2, 3, 4, 5]
 
                     trained_models = {} # step → trained model
                     future_predictions_list = [] # normalized future preds in step order

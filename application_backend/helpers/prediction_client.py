@@ -158,12 +158,12 @@ def build_prediction_payload(ohlcv_data, num_predictions, callback_url=None): # 
             }
         ) # one close point
 
-    if len(points) < 8: # predictor MIN_DATA_POINTS
+    if len(points) < 19: # predictor needs SEQUENCE_LENGTH(14) + max horizon(5)
         raise ValueError(
-            f"Need at least 8 OHLCV closes for predictor, got {len(points)}"
+            f"Need at least 19 OHLCV closes for predictor, got {len(points)}"
         ) # fail before enqueue
 
-    num_predictions = max(1, min(int(num_predictions), 3)) # predictor hard cap
+    num_predictions = max(1, min(int(num_predictions), 5)) # predictor hard cap
 
     payload: Dict[str, Any] = {
         "asset": "SOL",
@@ -184,7 +184,7 @@ def build_prediction_payload(ohlcv_data, num_predictions, callback_url=None): # 
 
 ########## CALLBACK TO PREDICTION ROWS ##########
 
-def callback_to_prediction_rows(callback_payload, num_predictions=3): # function to extract future closes for sol_predictions
+def callback_to_prediction_rows(callback_payload, num_predictions=5): # function to extract future closes for sol_predictions
 
     if not callback_payload: # empty
         return [] # nothing to upsert
@@ -195,7 +195,7 @@ def callback_to_prediction_rows(callback_payload, num_predictions=3): # function
 
     series = predictions[0] # SOL-USD (only series we send)
     data = series.get("data") or [] # fitted history + future tail
-    n = max(1, min(int(num_predictions), 3)) # horizon used
+    n = max(1, min(int(num_predictions), 5)) # horizon used
     future_points = data[-n:] if len(data) >= n else data # last N = future steps
 
     rows: List[Dict[str, Any]] = [] # Tiger-ready rows
@@ -204,7 +204,7 @@ def callback_to_prediction_rows(callback_payload, num_predictions=3): # function
             {
                 "time": _parse_prediction_time(point["x"]),
                 "predicted_close": float(point["y"]),
-                "model_version": "lstm-v1",
+                "model_version": "bigru-attn-v1",
             }
         ) # one forecast row
 
@@ -213,14 +213,14 @@ def callback_to_prediction_rows(callback_payload, num_predictions=3): # function
 
 ########## CALLBACK TO FRONTEND SERIES ##########
 
-def callback_to_frontend_predictions(callback_payload, num_predictions=3): # function to build frontend predictions blob from callback
+def callback_to_frontend_predictions(callback_payload, num_predictions=5): # function to build frontend predictions blob from callback
 
     rows = callback_to_prediction_rows(callback_payload, num_predictions=num_predictions) # parse
     series = [
         {
             "time": row["time"].isoformat(),
             "predicted_close": row["predicted_close"],
-            "model_version": row.get("model_version", "lstm-v1"),
+            "model_version": row.get("model_version", "bigru-attn-v1"),
         }
         for row in rows
     ] # JSON-ready
@@ -239,7 +239,7 @@ def callback_to_frontend_predictions(callback_payload, num_predictions=3): # fun
 
 def send_timeseries_to_predictor( # function to POST SOL timeseries to predictor_backend with Auth0 M2M Bearer token
         ohlcv_data,
-        num_predictions=3,
+        num_predictions=5,
         callback_url=None
 ):
 
@@ -320,10 +320,10 @@ def wait_for_predictions( # function to block until /callback/solana stores comp
 
 ########## RUN PREDICTIONS ##########
 
-def run_predictions(ohlcv_data, num_predictions=3): # function to send timeseries then wait for completed prediction JSON
+def run_predictions(ohlcv_data, num_predictions=5): # function to send timeseries then wait for completed prediction JSON
 
     callback_store.clear_pending_prediction_result() # ignore stale callbacks
-    num_predictions = max(1, min(int(num_predictions), 3)) # enforce predictor cap
+    num_predictions = max(1, min(int(num_predictions), 5)) # enforce predictor cap
     ack = send_timeseries_to_predictor(ohlcv_data, num_predictions=num_predictions) # enqueue
     task_id = ack.get("task_id") # extract task id if present
     logger.info("Predictor accepted task_id=%s", task_id) # log enqueue

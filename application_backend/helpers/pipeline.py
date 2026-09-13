@@ -153,7 +153,7 @@ def run_solana_update_pipeline(forecast_days=None, force=False): # function to o
 
     ##### 4) call predictor, wait, persist predictions #####
 
-    num_predictions = max(1, min(int(forecast_days), 3)) # predictor hard cap is 3
+    num_predictions = max(1, min(int(forecast_days), 5)) # predictor hard cap is 5
     summary["num_predictions"] = num_predictions # record capped horizon
     callback_payload = prediction_client.run_predictions(
         ohlcv_data,
