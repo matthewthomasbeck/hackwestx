@@ -25,6 +25,7 @@ import logging # import logging for Tiger DB messages
 import os # import os for DATABASE_URL / TIGER_* env vars
 from contextlib import contextmanager # import contextmanager for connection lifecycle
 from datetime import datetime # import datetime for OHLCV/prediction timestamps
+from pathlib import Path # import Path to resolve application_backend/.env regardless of cwd
 from typing import Any, Dict, List, Optional # import typing helpers
 from urllib.parse import quote_plus # import quote_plus for password URL encoding
 
@@ -36,7 +37,8 @@ from psycopg.rows import dict_row # import dict_row for dict-shaped query result
 
 ##### load environment #####
 
-load_dotenv() # load Tiger Cloud connection settings
+# Always load application_backend/.env (not whatever directory the process was started from)
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 
 
@@ -60,22 +62,66 @@ logger = logging.getLogger(__name__) # create module logger
 ##################################################
 
 
+########## URI HAS PASSWORD ##########
+
+def _uri_has_password(database_url): # function to detect whether a Postgres URI includes a non-empty password
+
+    if "@" not in database_url: # not a standard URI
+        return False # treat as missing
+    userinfo = database_url.split("@", 1)[0] # scheme://user:pass
+    if "://" in userinfo: # strip scheme
+        userinfo = userinfo.split("://", 1)[1] # user:pass or user
+    if ":" not in userinfo: # postgres://user@host — no password slot
+        return False # missing
+    password = userinfo.split(":", 1)[1] # may be empty
+    return bool(password) # True only when non-empty
+
+
+########## INJECT PASSWORD INTO URI ##########
+
+def _inject_password(database_url, password): # function to insert/replace userinfo password in a Postgres URI
+
+    if "@" not in database_url: # unexpected shape
+        return database_url # leave unchanged
+    head, tail = database_url.split("@", 1) # scheme://userinfo  |  host...
+    if "://" not in head: # unexpected
+        return database_url # leave unchanged
+    scheme, userinfo = head.split("://", 1) # postgres  |  user:pass
+    user = userinfo.split(":", 1)[0] if userinfo else "tsdbadmin" # keep username
+    return f"{scheme}://{quote_plus(user)}:{quote_plus(password)}@{tail}" # rebuilt URI
+
+
 ########## BUILD DATABASE URL ##########
 
 def _database_url(): # function to resolve DATABASE_URL or compose it from TIGER_* pieces
 
-    database_url = os.getenv("DATABASE_URL") # prefer full URI
-    if database_url: # already provided
-        return database_url # use as-is
+    database_url = (os.getenv("DATABASE_URL") or "").strip() # may be set from template/CLI
+    password = os.getenv("TIGER_PASSWORD") or "" # dedicated password var
 
-    host = os.getenv("TIGER_HOST") # Tiger host
-    port = os.getenv("TIGER_PORT", "5432") # default Postgres port
-    db = os.getenv("TIGER_DB", "tsdb") # default Timescale db
-    user = os.getenv("TIGER_USER", "tsdbadmin") # default admin user
-    password = os.getenv("TIGER_PASSWORD", "") # password from env
-    sslmode = os.getenv("TIGER_SSLMODE", "require") # SSL mode
+    if database_url: # URI present — may still lack a password
+        if _uri_has_password(database_url): # complete URI
+            return database_url # use as-is
+        if password.strip(): # fill from TIGER_PASSWORD
+            logger.info("DATABASE_URL missing password — injecting TIGER_PASSWORD") # no secret logged
+            return _inject_password(database_url, password) # patched URI
+        raise ValueError(
+            "DATABASE_URL has no password and TIGER_PASSWORD is empty — "
+            "set TIGER_PASSWORD in application_backend/.env "
+            "(quote it if it contains # or spaces)"
+        ) # fail clear
+
+    host = (os.getenv("TIGER_HOST") or "").strip() # Tiger host
+    port = (os.getenv("TIGER_PORT") or "5432").strip() # default Postgres port
+    db = (os.getenv("TIGER_DB") or "tsdb").strip() # default Timescale db
+    user = (os.getenv("TIGER_USER") or "tsdbadmin").strip() # default admin user
+    sslmode = (os.getenv("TIGER_SSLMODE") or "require").strip() # SSL mode
     if not host: # need host or DATABASE_URL
         raise ValueError("DATABASE_URL or TIGER_HOST must be set") # fail fast
+    if not password.strip(): # Tiger always requires a password
+        raise ValueError(
+            "TIGER_PASSWORD is empty — set it in application_backend/.env "
+            "(quote it if it contains # or spaces)"
+        ) # fail fast before fe_sendauth
 
     return (
         f"postgres://{quote_plus(user)}:{quote_plus(password)}"
