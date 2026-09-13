@@ -128,10 +128,10 @@ class MarketStore extends ChangeNotifier { // class to hold latest /market JSON 
 
   /*########## ENSURE DATA ##########*/
 
-  Future<MarketPayload> ensureData() async { // function to load, and auto-refresh when empty
+  Future<MarketPayload> ensureData() async { // function to load market; do not auto-fill empty
 
-    final payload = await load(); // initial GET
-    if (payload.isReady) { // real + predictions already cached
+    final payload = await load(); // initial GET — Tiger / EC2 is source of truth
+    if (payload.isReady) { // real + predictions already available
       return payload; // done
     }
     if (payload.isPending) { // real ready, forecasts in flight (or stuck after a failed run)
@@ -144,21 +144,9 @@ class MarketStore extends ChangeNotifier { // class to hold latest /market JSON 
       }
       return payload; // show chart with pending banner
     }
-    // empty — kick pipeline and wait briefly for first OHLCV bars
-    await refresh(); // POST /refresh + start poller
-    for (var i = 0; i < 15; i++) { // ~30s for yfinance → Tiger real-only cache
-      final current = market; // latest from poller / load
-      if (current != null && !current.isEmpty) { // real (or ready) arrived
-        return current; // splash can continue
-      }
-      await Future<void>.delayed(const Duration(seconds: 2)); // wait one interval
-      try {
-        await load(silent: true); // explicit GET between waits
-      } catch (_) {
-        // keep waiting through transient blips
-      }
-    }
-    return market ?? payload; // may still be empty if backend/Tiger down
+    // empty — leave empty. LoadingPage routes to EmptyStatusPage; user taps Refresh.
+    // Auto-refresh here was refilling from yfinance and looking like "stale cache".
+    return payload;
 
   }
 
