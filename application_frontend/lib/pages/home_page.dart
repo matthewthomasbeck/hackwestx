@@ -73,9 +73,35 @@ class _HomePageState extends State<HomePage> { // class to bind MarketStore into
   void initState() { // function to ensure market snapshot exists on first home entry
 
     super.initState(); // Flutter init
+    marketStore.addListener(_onMarketChanged); // route away if Tiger wipe → empty
     if (marketStore.market == null && !marketStore.loading) { // cold open without splash fetch
       marketStore.ensureData(); // load (+ refresh if empty)
     }
+
+  }
+
+  /*########## DISPOSE ##########*/
+
+  @override
+  void dispose() { // function to drop market listener
+
+    marketStore.removeListener(_onMarketChanged); // avoid leaks
+    super.dispose(); // Flutter dispose
+
+  }
+
+  /*########## ON MARKET CHANGED ##########*/
+
+  void _onMarketChanged() { // function to leave home when market becomes empty mid-session
+
+    final market = marketStore.market; // latest snapshot
+    if (market == null || !market.isEmpty || marketStore.refreshing) { // still usable / refill in flight
+      return; // stay on home
+    }
+    if (!mounted) { // disposed
+      return; // bail
+    }
+    Navigator.of(context).pushReplacementNamed(AppRoutes.empty); // show empty status
 
   }
 

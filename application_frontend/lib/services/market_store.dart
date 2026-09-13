@@ -134,8 +134,14 @@ class MarketStore extends ChangeNotifier { // class to hold latest /market JSON 
     if (payload.isReady) { // real + predictions already cached
       return payload; // done
     }
-    if (payload.isPending) { // real ready, forecasts in flight
+    if (payload.isPending) { // real ready, forecasts in flight (or stuck after a failed run)
       _startPolling(); // keep UI updating when callback lands
+      // Nudge pipeline: 409 if already running; otherwise recovers stuck pending after wipe
+      try {
+        await _api.refreshMarket(force: false); // kick predictor if idle
+      } catch (_) {
+        // poller still covers in-flight / transient failures
+      }
       return payload; // show chart with pending banner
     }
     // empty — kick pipeline and wait briefly for first OHLCV bars
@@ -166,8 +172,12 @@ class MarketStore extends ChangeNotifier { // class to hold latest /market JSON 
     }
     if (payload.isReady) { // full snapshot
       _stopPolling(); // stop when settled
+      return; // done
     }
-    // empty: leave an existing poller alone (refresh owns that lifecycle)
+    if (payload.isEmpty && !refreshing) { // Tiger wiped / no data and no refresh in flight
+      _stopPolling(); // stop pending spinner path
+    }
+    // empty + refreshing: leave poller running (refresh owns that lifecycle)
 
   }
 
@@ -184,7 +194,7 @@ class MarketStore extends ChangeNotifier { // class to hold latest /market JSON 
       if (_pollTicks > _maxPollTicks) { // gave up waiting
         _stopPolling(); // stop timer
         error = 'Timed out waiting for market data'; // soft error
-        notifyListeners(); // rebuild
+        notifyListeners(); // rebuild — clears endless pending wait UX
         return; // done
       }
       try {
@@ -194,6 +204,8 @@ class MarketStore extends ChangeNotifier { // class to hold latest /market JSON 
         notifyListeners(); // home / forecast rebuild
         if (payload.isReady) { // real + predictions
           _stopPolling(); // stop when fully ready
+        } else if (payload.isEmpty && !refreshing) { // DB cleared mid-poll
+          _stopPolling(); // stop stuck pending dots; UI can route to empty
         }
       } catch (_) {
         // Keep polling through transient network blips while pipeline runs

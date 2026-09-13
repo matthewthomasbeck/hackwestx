@@ -128,24 +128,26 @@ def me(): # function to return Auth0 sub/claims for the logged-in user
 
 @api_bp.route("/market", methods=["GET"]) # register GET /api/v1/market
 @require_auth # require Flutter user Auth0 access token
-def get_market(): # function to serve cached SOL real (+ predictions) JSON to Flutter
+def get_market(): # function to serve SOL real (+ predictions) JSON to Flutter
 
-    cached = frontend_delivery.get_cached_frontend_payload() # in-memory snapshot
-    if cached is not None: # cache hit
-        pred_series = ((cached.get("predictions") or {}) or {}).get("series") or [] # forecast list
-        # Rebuild from Tiger when a ready snapshot is short of the 5-day horizon
-        if not (cached.get("status") == "ready" and 0 < len(pred_series) < 5):
-            return jsonify(cached), 200 # serve cached market JSON
+    cached = frontend_delivery.get_cached_frontend_payload() # in-memory snapshot (may be stale)
 
     try:
-        bundle = tiger_db.read_market_bundle(forecast_days=5) # next-5 forward forecasts
+        bundle = tiger_db.read_market_bundle(forecast_days=5) # Tiger is source of truth
         payload = _payload_from_tiger_bundle(bundle, forecast_days=5) # empty | pending | ready
-        if payload.get("status") != "empty": # warm cache when Tiger has data
-            frontend_delivery.send_to_frontend(payload) # so later GETs skip DB
+
+        if payload.get("status") == "empty": # Tiger wiped / never filled
+            if cached is not None: # drop stale ready/pending so Flutter stops showing old charts
+                frontend_delivery.set_cached_frontend_payload(None) # invalidate memory cache
+                logger.info("Cleared frontend cache after empty Tiger market bundle") # log wipe
+            return jsonify(payload), 200 # empty — Flutter shows empty status / kicks refresh
+
+        # Align memory cache with Tiger so pending→ready advances and wiped→refilled is fresh
+        frontend_delivery.send_to_frontend(payload) # warm cache from DB
         return jsonify(payload), 200 # serve Tiger-derived snapshot
     except Exception as e: # Tiger miss / not configured
-        logger.info("No cached payload and Tiger fallback failed: %s", e) # log miss
-        if cached is not None: # prefer stale cache over empty on Tiger miss
+        logger.info("Tiger market read failed; falling back to cache if any: %s", e) # log miss
+        if cached is not None: # prefer last-known only when Tiger is unreachable
             return jsonify(cached), 200 # last-known snapshot
         return jsonify(_empty_market_payload()), 200 # empty snapshot until refresh
 
