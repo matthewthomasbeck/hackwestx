@@ -76,4 +76,7 @@ THINGS DONE:
 17. application frontend now uses auth0 for user authentication
 18. application backend now pushes data to frontend
 19. application frontend now takes in data from backend
+20. changed model from LSTM placeholder to GRU for better inference
+
+
 
