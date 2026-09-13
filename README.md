@@ -82,6 +82,7 @@ THINGS DONE:
 23. frontend forecast now shows 5 predictions
 24. added paper trading
 25. added sparkline for trading
-
+26. added Sol selling
+27. removed my typical copywright statements
 
 
