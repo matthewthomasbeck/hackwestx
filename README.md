@@ -28,17 +28,17 @@ Application Frontend Components:
 Application Frontend Ideas:
 * want theme to be pruple + blue + green with dark/light mode and a slight glow and gradients
 * want to use simple font and icons whose colors I can ideally manipulate
-* loading page with simple solana logo in the center
-* login page with
-* home page with
-* buy sol page with
-* sol forecast in detail page with
-* paper portfolio page with
-* trade confirm/receipt page with
-* trade history page with
-* account settings page with
-* empty/pending/error pages with
-* onboarding page with
+* loading page with simple solana logo in the center, subtle pulsing glow animation, short status text below (e.g. "Loading market data..."), and auto-navigate to login or home once auth + first /market fetch finish
+* login page with app name + one-line tagline at top, centered "Sign in with Auth0" button (purple/blue gradient), small footer note that this is paper trading only, and redirect to onboarding on first launch or home if already seen onboarding
+* home page with current SOL price + % change header, main line/candle chart showing real prices (solid line) and predicted prices (dashed/green line), "last updated" timestamp, pull-to-refresh or refresh icon that hits POST /market/refresh, quick-action buttons to Forecast Detail / Portfolio / Buy SOL, and bottom nav or drawer for other pages
+* buy sol page with available paper USD balance at top, amount-to-spend text field (or slider), live preview of estimated SOL received at current price, optional short note like "Based on latest forecast" if model is bullish, and a primary "Review Buy" button that goes to trade confirm
+* sol forecast in detail page with next 3 predicted daily closes as cards or a small chart, model version + forecast generated time, simple up/down/neutral indicator per day, and a "Why this forecast?" blurb (e.g. "LSTM trained on recent SOL daily closes")
+* paper portfolio page with starting balance vs current value summary, cash available, SOL held + average buy price, unrealized P&L in green/red, and a small sparkline or mini chart of portfolio value over time (can be stubbed at first)
+* trade confirm/receipt page with order summary (USD spent, SOL bought, price used, timestamp), confirm + cancel buttons on confirm step, then success receipt view with checkmark/glow, trade ID, and buttons to view history or return home
+* trade history page with scrollable list of past paper trades (newest first), each row showing date, buy/sell type, amount, price, and optional "forecast was correct?" badge once accuracy data exists
+* account settings page with Auth0 profile name/email, dark/light mode toggle, paper account reset button (with confirm dialog), app version, logout button, and link back to onboarding/help
+* empty/pending/error pages with reusable layouts: empty = "No market data yet" + refresh button; pending = "Generating predictions..." spinner while status is predictions_pending; error = friendly message + retry button for network/auth failures
+* onboarding page with 2-3 swipeable cards explaining the app (1. AI forecasts SOL, 2. You paper-trade with fake money, 3. Track results over time), skip/next buttons, and "Get Started" that marks onboarding complete and routes to login/home
 
 Application Backend Components:
 * needs to use auth0 for login
