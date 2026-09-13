@@ -49,3 +49,8 @@ THINGS DONE:
 5. set up yfinance for solana time series
 6. wrote skeleton for application backend
 7. wrote skeleton for predictor backend
+8. completed predictor backend env
+9. completed application backend env
+10. completed prediction pipeline on desktop
+
+
